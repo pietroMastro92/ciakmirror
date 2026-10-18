@@ -5,7 +5,7 @@ Ricevitore **AirPlay 2** per Android TV: i Mac (e iPhone/iPad) vedono la TV nel 
 
 - **Target**: Akai AKTV4330 — Android 9 (API 28), MStar, armeabi-v7a, ~915MB RAM, 1920x1080, Wi-Fi
 - **Sorgenti test**: macOS 26/27 (primario), iOS/iPadOS
-- **Stato**: Fase 0 — verifica di fattibilità sulla TV
+- **Stato**: Fase 0 ✅ completata — motore scelto: **iMirror** (da forkar)
 
 ## Architettura
 - **Motore**: fork di [jqssun/android-airplay-server](https://github.com/jqssun/android-airplay-server)
@@ -17,11 +17,25 @@ Ricevitore **AirPlay 2** per Android TV: i Mac (e iPhone/iPad) vedono la TV nel 
 ## Fasi
 | Fase | Contenuto | Stato |
 |------|-----------|-------|
-| 0 | Probe TV + test APK precompilati (iMirror, jqssun) da macOS 26/27 | 🟡 in corso |
+| 0 | Probe TV + test APK precompilati (iMirror, jqssun) da macOS 26/27 | ✅ fatto |
 | 1 | Fork + build NDK + APK ricevente (UI grezza) | ⬜ |
 | 2 | UX CiakMirror completa (schermata, stato, impostazioni, PIN, audio) | ⬜ |
 | 3 | Tuning hardware (1GB RAM, fps, latenza, sessioni lunghe) | ⬜ |
 | 4 | Icona, APK finale, guida Mac, licenze | ⬜ |
+
+## Risultati Fase 0 (18/10/2026)
+- **iMirror** (`dev.imirror.receiver`) = **motore scelto**: 1080p fluido su contenuti video,
+  audio ok, compatibile **subito** con macOS 26.7. TV visibile in "Duplica schermo".
+- **jqssun AirPlay** (`io.github.jqssun.airplay`) = confronto perso (720p30 + low-latency
+  → percepito peggiore su questo SoC). Resta come riserva; configurabile via ADB
+  (`SettingsReceiver` broadcast).
+- Wi-Fi: solo **2.4GHz** (link 65 Mbps, RSSI −55dBm). **eth0 presente ma scollegato** →
+  Ethernet raccomandato per ridurre la latenza del puntatore.
+- `com.overdevs.at4k` (launcher) consuma **~38% CPU** in background → va fermato durante
+  le sessioni di mirroring (libera quasi un core!).
+- Latenza del **puntatore** ~0.3–1 s: inerente al protocollo AirPlay (buffer TCP+encode+decode),
+  non risolvibile lato ricevitore oltre le ottimizzazioni; il video fluido la maschera.
+- DRM (Netflix ecc.): da confermare schermo nero (previsto).
 
 ## Hardware TV (verificato 18/10/2026)
 - `ro.product.cpu.abilist` = `armeabi-v7a,armeabi`
