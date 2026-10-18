@@ -50,7 +50,7 @@ class WaitingScreen @JvmOverloads constructor(
      * The name is read at startup and doesn't change while the app is running.
      */
     private fun populateDeviceName() {
-        val deviceName = NetworkUtils.getDeviceName(context)
+        val deviceName = NetworkUtils.getAdvertisedName(context)
         findViewById<TextView>(R.id.text_device_name).text = deviceName
     }
 }

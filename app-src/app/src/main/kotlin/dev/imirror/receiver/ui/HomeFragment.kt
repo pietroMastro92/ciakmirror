@@ -143,7 +143,7 @@ class HomeFragment : Fragment() {
      * what to look for in their sender's picker.
      */
     private fun showDeviceName() {
-        val name = NetworkUtils.getDeviceName(requireContext())
+        val name = NetworkUtils.getAdvertisedName(requireContext())
         textDeviceName.text = getString(R.string.home_device_visible_as, name)
     }
 

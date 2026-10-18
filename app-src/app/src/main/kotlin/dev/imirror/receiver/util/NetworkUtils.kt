@@ -3,6 +3,9 @@ package dev.imirror.receiver.util
 import android.content.Context
 import android.net.wifi.WifiManager
 import android.provider.Settings
+import dev.imirror.receiver.settings.SettingsRepository
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import java.net.NetworkInterface
 import java.util.UUID
@@ -49,6 +52,24 @@ object NetworkUtils {
         // Sanitize: keep only safe characters for mDNS service names
         val sanitized = rawName.replace(Regex("[^A-Za-z0-9 _\\-]"), "").trim()
 
+        return sanitized.ifEmpty { DEFAULT_DEVICE_NAME }
+    }
+
+    /**
+     * Returns the name that will actually appear in AirPlay pickers: the configured
+     * display name (default "CiakMirror"), falling back to the system device name.
+     * Uses the same sanitization as [getDeviceName].
+     */
+    fun getAdvertisedName(context: Context): String {
+        val raw = try {
+            val settings = runBlocking {
+                SettingsRepository(context.applicationContext).settingsFlow.first()
+            }
+            settings.effectiveDisplayName.ifBlank { getDeviceName(context) }
+        } catch (e: Exception) {
+            getDeviceName(context)
+        }
+        val sanitized = raw.replace(Regex("[^A-Za-z0-9 _\\-]"), "").trim()
         return sanitized.ifEmpty { DEFAULT_DEVICE_NAME }
     }
 
