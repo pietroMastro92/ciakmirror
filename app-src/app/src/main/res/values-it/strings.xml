@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    strings.xml — Italiano
+    Chiavi identiche all'inglese possono essere omesse (vedi values/strings.xml).
+-->
+<resources>
+
+    <!-- ── Navigazione ─────────────────────────────────────────── -->
+    <string name="nav_home">Home</string>
+    <string name="nav_settings">Impostazioni</string>
+
+    <!-- ── HomeFragment ────────────────────────────────────────── -->
+    <string name="home_title">Pronto per le connessioni</string>
+    <!-- %1$s = nome del dispositivo mostrato ai mittenti -->
+    <string name="home_device_visible_as">Visibile come: %1$s</string>
+
+    <!-- ── Stati protocollo ────────────────────────────────────── -->
+    <string name="protocol_state_disabled">Disattivato</string>
+    <string name="protocol_state_advertising">In attesa</string>
+    <string name="protocol_state_connected">Connesso</string>
+    <string name="protocol_state_error">Errore</string>
+
+    <!-- ── Dettagli scheda protocollo ──────────────────────────── -->
+    <string name="protocol_detail_disabled">Attiva nelle Impostazioni</string>
+    <string name="protocol_detail_waiting">In attesa del dispositivo…</string>
+    <!-- %1$s = nome del mittente -->
+    <string name="protocol_detail_connected">In streaming da %1$s</string>
+    <string name="protocol_detail_error">Controlla le impostazioni Wi-Fi</string>
+
+    <!-- ── Stato servizio (badge) ──────────────────────────────── -->
+    <string name="service_state_running">Attivo</string>
+    <string name="service_state_stopped">Fermo</string>
+    <string name="service_state_restarting">Riavvio…</string>
+
+    <!-- ── Sezioni ─────────────────────────────────────────────── -->
+    <string name="section_protocols">Protocolli</string>
+    <string name="section_controls">Controllo servizio</string>
+
+    <!-- ── Pulsanti ────────────────────────────────────────────── -->
+    <string name="action_start">Avvia</string>
+    <string name="action_stop">Ferma</string>
+    <string name="action_restart">Riavvia</string>
+
+    <!-- ── Notifica ────────────────────────────────────────────── -->
+    <string name="notification_channel_name">Servizio CiakMirror</string>
+    <string name="notification_channel_description">Notifica del ricevitore AirPlay/Miracast/Cast</string>
+    <string name="notification_status_running">Ricevitore attivo — visibile in rete</string>
+    <string name="notification_status_stopped">Ricevitore fermo</string>
+    <string name="notification_status_streaming">Streaming da %1$s</string>
+
+    <!-- ── Intestazioni Impostazioni ───────────────────────────── -->
+    <string name="settings_section_display">Schermo</string>
+    <string name="settings_section_service">Servizio</string>
+    <string name="settings_section_developer">Sviluppatore</string>
+    <string name="settings_section_about">Info</string>
+
+    <!-- ── Voci Impostazioni ───────────────────────────────────── -->
+    <string name="setting_display_name">Nome dispositivo</string>
+    <string name="setting_display_name_system_default">Uso il nome di sistema</string>
+    <string name="setting_display_name_dialog_hint">Vuoto = nome di sistema</string>
+    <string name="setting_display_name_reset">Ripristina predefinito</string>
+    <string name="setting_display_name_collision_note">Registrato come: %1$s</string>
+    <string name="setting_airplay_enabled">Ricevitore AirPlay</string>
+    <string name="setting_airplay_subtitle">Accetta connessioni da macOS</string>
+    <string name="setting_miracast_enabled">Ricevitore Miracast</string>
+    <string name="setting_miracast_subtitle">Accetta connessioni da Windows e Android</string>
+    <string name="setting_cast_enabled">Ricevitore Google Cast</string>
+    <string name="setting_cast_subtitle">Accetta connessioni da Chrome e Android</string>
+    <string name="setting_mirror_audio">Riproduci audio</string>
+    <string name="setting_mirror_audio_subtitle">Riproduce il suono del Mac durante il mirroring</string>
+    <string name="setting_pin_auth">Richiedi PIN di abbinamento</string>
+    <string name="setting_pin_auth_subtitle">Mostra un codice sulla TV da inserire per connettersi</string>
+    <string name="setting_start_on_boot">Avvia all\'accensione</string>
+    <string name="setting_debug_overlay">Overlay di debug</string>
+    <string name="setting_debug_overlay_subtitle">Mostra FPS, coda e drop in tempo reale</string>
+    <string name="setting_force_high_res">Alta risoluzione (1440p)</string>
+    <string name="setting_force_high_res_subtitle">Mirroring più nitido; usa più CPU. Off = 1080p</string>
+    <string name="setting_version">Versione</string>
+    <string name="setting_reset_defaults">Ripristina predefiniti</string>
+
+    <!-- ── Schermata d'attesa ──────────────────────────────────── -->
+    <string name="waiting_title">Pronto per AirPlay</string>
+    <string name="waiting_subtitle">Apri AirPlay sul tuo Mac e scegli questo dispositivo</string>
+    <string name="waiting_device_label">Questo dispositivo:</string>
+    <string name="streaming_hint">Premi Indietro per fermare lo streaming</string>
+
+    <!-- ── In riproduzione ─────────────────────────────────────── -->
+    <string name="now_playing_audio">Riproduzione audio</string>
+    <string name="now_playing_from">Audio da %1$s</string>
+
+    <!-- ── PIN di abbinamento ──────────────────────────────────── -->
+    <string name="pairing_pin_title">Codice di abbinamento AirPlay</string>
+    <string name="pairing_pin_hint">Inserisci questo codice sul dispositivo per connetterti</string>
+
+    <!-- ── Errori ──────────────────────────────────────────────── -->
+    <string name="error_network_unavailable">Nessuna connessione Wi-Fi. Connetti la TV al Wi-Fi.</string>
+    <string name="error_mdns_failed">Pubblicazione in rete fallita.</string>
+    <string name="error_wifi_p2p_unavailable">Miracast non è supportato su questo dispositivo.</string>
+    <string name="error_cast_unavailable">Google Cast richiede Google Play Services (non disponibili su questo dispositivo).</string>
+
+    <!-- ── Accessibilità ───────────────────────────────────────── -->
+    <string name="content_desc_airplay_icon">Icona protocollo AirPlay</string>
+    <string name="content_desc_miracast_icon">Icona protocollo Miracast</string>
+    <string name="content_desc_cast_icon">Icona protocollo Google Cast</string>
+    <string name="content_desc_status_dot">Indicatore di stato</string>
+
+</resources>
