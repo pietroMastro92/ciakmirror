@@ -62,6 +62,7 @@ class MirrorStreamServer(
     // Set by the reader thread when a frame is dropped under load; the decoder thread then skips
     // frames until the next keyframe (IDR) so it never decodes a reference-broken, corrupt stream.
     @Volatile private var awaitingKeyframe = false
+    @Volatile private var awaitingSince = 0L
 
     /** The OS-assigned TCP port macOS should connect to (returned in the SETUP response). */
     val dataPort: Int get() = serverSocket.localPort
@@ -125,6 +126,7 @@ class MirrorStreamServer(
             queue.offer(item)
             framesDropped++
             awaitingKeyframe = true        // a frame was lost — resync the decoder at the next IDR
+            awaitingSince = System.currentTimeMillis()
         }
         StreamStats.videoQueue = queue.size
         if (framesIn % 300 == 0) {
@@ -193,6 +195,7 @@ class MirrorStreamServer(
         val sc = MirrorCrypto.START_CODE
         decoder = VideoDecoder(surface).also { it.initialize(sc + sps, sc + pps, width, height) }
         awaitingKeyframe = true                                // a fresh decoder must start at an IDR
+        awaitingSince = System.currentTimeMillis()
         StreamStats.videoRes = "${width}x${height}"
         Logger.i("Mirror decoder (re)built for surface (sps=${sps.size}B pps=${pps.size}B)")
     }
@@ -214,9 +217,19 @@ class MirrorStreamServer(
         if (awaitingKeyframe) {
             // After a dropped frame the stream is reference-broken; skip until the next IDR so we
             // don't feed the decoder predicted frames with missing references (which smear/blocky).
-            if (!isKeyframe(annexB)) return
-            awaitingKeyframe = false
-            Logger.i("Mirror: resynced on keyframe after a dropped frame")
+            if (!isKeyframe(annexB)) {
+                // Watchdog: se il keyframe non arriva entro il timeout (es. dopo un ritorno da
+                // background/screensaver), riparte comunque: meglio qualche artefatto che frozen.
+                if (System.currentTimeMillis() - awaitingSince > KEYFRAME_WAIT_TIMEOUT_MS) {
+                    awaitingKeyframe = false
+                    Logger.w("Mirror: keyframe timeout — riparto comunque (artefatti fino al prossimo IDR)")
+                } else {
+                    return
+                }
+            } else {
+                awaitingKeyframe = false
+                Logger.i("Mirror: resynced on keyframe after a dropped frame")
+            }
         }
         if (framePtsUs == 0L) Logger.i("Mirror: first video frame fed to decoder (${annexB.size}B)")
         d.decodeNalUnit(annexB, framePtsUs)
@@ -270,5 +283,8 @@ class MirrorStreamServer(
         private const val QUEUE_CAPACITY = 90                  // ~1.5s @60fps before dropping
         private const val SURFACE_WAIT_TRIES = 50
         private const val SURFACE_WAIT_MS = 100L
+        // Se in attesa di keyframe non arriva nessun IDR entro questo tempo, si riparte comunque
+        // (caso tipico: ritorno da background/screensaver con Surface ricreata).
+        private const val KEYFRAME_WAIT_TIMEOUT_MS = 5_000L
     }
 }
