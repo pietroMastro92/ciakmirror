@@ -278,6 +278,15 @@ class AudioStreamServer(
             initDecoder()
             initAudioTrack()
             while (running) {
+                // Bassa latenza: il sender macOS pre-bufferizza l'audio (fino a ~600ms di coda);
+                // buttiamo SOLO l'eccesso più vecchio oltre la soglia, con isteresi (32→24 frame),
+                // così la latenza audio resta ~240ms senza drop continui.
+                if (frameQueue.size > AUDIO_TRIM_ABOVE) {
+                    while (frameQueue.size > AUDIO_TRIM_TO) {
+                        frameQueue.poll()
+                        qDropCount++
+                    }
+                }
                 val payload = frameQueue.poll(200, TimeUnit.MILLISECONDS) ?: continue
                 try {
                     val decrypted = decryptPacket(payload)
@@ -434,6 +443,9 @@ class AudioStreamServer(
 
         // Jitter buffer depth between the receive and playback threads (~1 s at 92 frames/s).
         private const val AUDIO_QUEUE_CAPACITY = 96
+        // Trim bassa latenza (vedi runPlayback): soglia/target con isteresi ~80ms.
+        private const val AUDIO_TRIM_ABOVE = 32
+        private const val AUDIO_TRIM_TO = 24
 
         // Sliding window of recently-played RTP sequence numbers for duplicate suppression.
         // ~11 s at 92 packets/s — far longer than any retransmit gap, far shorter than the

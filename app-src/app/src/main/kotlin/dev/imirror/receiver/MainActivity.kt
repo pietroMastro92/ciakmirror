@@ -5,9 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.view.WindowManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.view.View
@@ -70,6 +72,9 @@ class MainActivity : AppCompatActivity() {
     private var currentPhotoFrame: PhotoFrame? = null
     private var currentNowPlaying: NowPlayingInfo? = null
     private var currentPin: String? = null
+
+    /** Wi-Fi ad alte prestazioni durante lo streaming: latenza stabile (evita il risparmio energia radio). */
+    private var wifiLock: WifiManager.WifiLock? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -134,6 +139,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // Pulizia anti-leak del lock schermo/Wi-Fi (lo streaming potrebbe essere ancora attivo)
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        releaseWifiLock()
         // A user-initiated exit (Back out of the app) should end any active mirror — closing the
         // service stops the receiver, which drops the RTSP connection so the sender stops mirroring
         // too. isFinishing distinguishes a real exit from a config-change recreation (where the
@@ -241,6 +249,10 @@ class MainActivity : AppCompatActivity() {
         streamingScreen.visibility = View.VISIBLE
         streamingContainer.visibility = View.VISIBLE
         streamingContainer.bringToFront()
+        // Tiene sveglio lo schermo durante lo streaming: senza questo la Fire TV attiva lo
+        // screensaver, la Surface del video muore e l'immagine resta congelata al ritorno.
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        acquireWifiLock()
     }
 
     fun showPhotoScreen(photoFrame: PhotoFrame) {
@@ -277,6 +289,25 @@ class MainActivity : AppCompatActivity() {
         pinScreen.visibility = View.GONE
         streamingScreen.visibility = View.VISIBLE
         streamingContainer.visibility = View.GONE
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        releaseWifiLock()
+    }
+
+    private fun acquireWifiLock() {
+        if (wifiLock != null) return
+        runCatching {
+            val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val lock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "ciakmirror:stream")
+            lock.setReferenceCounted(false)
+            lock.acquire()
+            wifiLock = lock
+            Timber.d("Wi-Fi high-perf lock acquisito")
+        }
+    }
+
+    private fun releaseWifiLock() {
+        runCatching { wifiLock?.release() }
+        wifiLock = null
     }
 
     /** Returns the SurfaceView Surface for the VideoDecoder. */

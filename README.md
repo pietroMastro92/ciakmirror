@@ -4,6 +4,7 @@ Ricevitore **AirPlay 2** per Android TV: i Mac (e iPhone/iPad) vedono la TV nel 
 "Duplica schermo" / "Screen Mirroring" — nessun software da installare sui dispositivi Apple.
 
 - **Target**: Akai AKTV4330 — Android 9 (API 28), MStar, armeabi-v7a, ~915MB RAM, 1920x1080, Wi-Fi
+- **Target aggiuntivo**: Fire TV Stick 4K (AFTMM) — Fire OS su Android 7.1.2 (API 25), armeabi-v7a ✓ supportato (icone PNG per compatibilità launcher)
 - **Sorgenti test**: macOS 26/27 (primario), iOS/iPadOS
 - **Stato**: Fase 0 ✅ completata — motore scelto: **iMirror** (da forkar)
 

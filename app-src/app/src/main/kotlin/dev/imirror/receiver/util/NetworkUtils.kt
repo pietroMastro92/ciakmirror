@@ -144,7 +144,7 @@ object NetworkUtils {
     }
 
     // Constants
-    private const val DEFAULT_DEVICE_NAME = "CiakMirror"
+    private const val DEFAULT_DEVICE_NAME = "iMirror"
     private const val FALLBACK_MAC_ADDRESS = "aa:bb:cc:dd:ee:ff"
     private const val PREFS_NAME = "imirror_prefs"
     private const val PREF_KEY_DEVICE_UUID = "imirror_device_uuid"

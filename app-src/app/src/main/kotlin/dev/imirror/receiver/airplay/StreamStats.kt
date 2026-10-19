@@ -40,7 +40,7 @@ object StreamStats {
 
     /** Human-readable multi-line HUD text. */
     fun summary(): String =
-        "CiakMirror · debug\n" +
+        "iMirror · debug\n" +
         "VIDEO  ${videoRes.ifEmpty { "—" }}   ${videoFps} fps   q ${videoQueue}   drop ${videoDropPct}%\n" +
         "AUDIO  " + (if (audioActive) "on   q ${audioQueue}   dup ${audioDupPct}%" else "off")
 }
