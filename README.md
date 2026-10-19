@@ -1,59 +1,52 @@
-# CiakMirror
+# iMirror — AirPlay per Android TV & Fire TV
 
-Ricevitore **AirPlay 2** per Android TV: i Mac (e iPhone/iPad) vedono la TV nel menu
-"Duplica schermo" / "Screen Mirroring" — nessun software da installare sui dispositivi Apple.
+Trasforma la tua Android TV / Fire TV in un ricevitore **AirPlay**: iPhone, iPad e Mac
+vedono la TV nel menu **"Duplica schermo"** e proiettano schermo + audio — senza installare
+nulla sui dispositivi Apple.
 
-- **Target**: Akai AKTV4330 — Android 9 (API 28), MStar, armeabi-v7a, ~915MB RAM, 1920x1080, Wi-Fi
-- **Target aggiuntivo**: Fire TV Stick 4K (AFTMM) — Fire OS su Android 7.1.2 (API 25), armeabi-v7a ✓ supportato (icone PNG per compatibilità launcher)
-- **Sorgenti test**: macOS 26/27 (primario), iOS/iPadOS
-- **Stato**: Fase 0 ✅ completata — motore scelto: **iMirror** (da forkar)
+- **Target**: Android TV (API 25+) e Fire TV — testato su Akai AKTV4330 (Android 9, MStar,
+  2.4GHz Wi-Fi) e Amazon Fire TV Stick 4K (Fire OS 6 / Android 7.1.2, 5GHz)
+- **Sorgenti**: macOS 26.x, iOS/iPadOS
+- **Versione**: v1.6.0
 
-## Architettura
-- **Motore**: fork di [jqssun/android-airplay-server](https://github.com/jqssun/android-airplay-server)
-  (base [UxPlay](https://github.com/FDH2/UxPlay), JNI): H.264/HEVC via MediaCodec → SurfaceView,
-  audio AAC-ELD/LC/ALAC. Riserva: [iMirror](https://github.com/prat3ik/iMirror) (più leggero, H.264).
-- **UI CiakMirror**: schermata d'attesa, nome device, stato live, PIN opzionale,
-  cap risoluzione/audio, impostazioni col telecomando.
+## Funzionalità
+- 🖥️ Mirroring schermo H.264/HEVC fino a **1440p** (hardware decode via MediaCodec)
+- 🔊 Audio **AAC-ELD** con **trim low-latency** (coda ~120ms: il pre-buffer di macOS viene tagliato)
+- ⚡ Pipeline a bassa latenza: drop frame intelligente, watchdog keyframe (5s), Wi-Fi High-Perf lock
+- 🖥️ **Keep-screen-on** durante lo streaming (niente screensaver che congela l'immagine)
+- 🇮🇹 UI **in italiano** (e inglese)
+- 🔔 **Self-updater**: controlla le Release di questo repo e propone l'aggiornamento
+  (le installazioni da store si aggiornano da sole)
+- 🔒 PIN di abbinamento opzionale, nome dispositivo configurabile, overlay di debug (FPS/code/drop)
+- 📱 Supporto "video streaming" (HLS) e telecomando DACP
 
-## Fasi
-| Fase | Contenuto | Stato |
-|------|-----------|-------|
-| 0 | Probe TV + test APK precompilati (iMirror, jqssun) da macOS 26/27 | ✅ fatto |
-| 1 | Fork + build NDK + APK ricevente (UI grezza) | ⬜ |
-| 2 | UX CiakMirror completa (schermata, stato, impostazioni, PIN, audio) | ⬜ |
-| 3 | Tuning hardware (1GB RAM, fps, latenza, sessioni lunghe) | ⬜ |
-| 4 | Icona, APK finale, guida Mac, licenze | ⬜ |
+## Installazione (sideload)
+1. Abilita il debug ADB (Fire TV: *Impostazioni → My Fire TV → Info → 7 click → Opzioni sviluppatore*)
+2. Dal computer: `adb connect <IP-TV>:5555` → `adb install imirror-universal.apk`
+3. Apri **iMirror** sulla TV e dal Mac/iPhone: *Centro di Controllo → Duplica schermo → iMirror*
 
-## Risultati Fase 0 (18/10/2026)
-- **iMirror** (`dev.imirror.receiver`) = **motore scelto**: 1080p fluido su contenuti video,
-  audio ok, compatibile **subito** con macOS 26.7. TV visibile in "Duplica schermo".
-- **jqssun AirPlay** (`io.github.jqssun.airplay`) = confronto perso (720p30 + low-latency
-  → percepito peggiore su questo SoC). Resta come riserva; configurabile via ADB
-  (`SettingsReceiver` broadcast).
-- Wi-Fi: solo **2.4GHz** (link 65 Mbps, RSSI −55dBm). **eth0 presente ma scollegato** →
-  Ethernet raccomandato per ridurre la latenza del puntatore.
-- `com.overdevs.at4k` (launcher) consuma **~38% CPU** in background → va fermato durante
-  le sessioni di mirroring (libera quasi un core!).
-- Latenza del **puntatore** ~0.3–1 s: inerente al protocollo AirPlay (buffer TCP+encode+decode),
-  non risolvibile lato ricevitore oltre le ottimizzazioni; il video fluido la maschera.
-- DRM (Netflix ecc.): da confermare schermo nero (previsto).
+## Aggiornamenti
+- **Sideload**: l'app controlla le [Release](https://github.com/pietroMastro92/ciakmirror/releases)
+  e propone il download + installazione con un tap.
+- **Store** (prossimamente su Google Play / Amazon Appstore): aggiornamenti automatici.
 
-## Hardware TV (verificato 18/10/2026)
-- `ro.product.cpu.abilist` = `armeabi-v7a,armeabi`
-- Android 9, MemTotal ≈ 915 MB (disponibile ≈ 320 MB), display 1920x1080
-- Rete: Wi-Fi · IP 192.168.1.56
+## Compilazione
+```bash
+# Firma release (keystore NON nel repo):
+export KEYSTORE_PATH=.../keystore/imirror-release.jks KEYSTORE_PASSWORD=... KEY_ALIAS=imirror KEY_PASSWORD=...
+./gradlew assembleRelease    # AAB per Play: bundleRelease
+```
+Richiede JDK 17+, Android SDK con **NDK 28.2.13676358** e **CMake 3.22.1**.
 
 ## Limitazioni note
-- Contenuti **DRM** (Netflix, Apple TV+, Disney+) → schermo nero: limite di tutti i
-  ricevitori AirPlay open source (protezione FairPlay di sistema).
-- Latenza tipica ~0.5–1.5 s (buffering AirPlay): ok per desktop/presentazioni/video.
-- Solo **stessa sottorete** (niente AWDL).
-- Audio con macOS è il percorso più delicato → toggle rapido nelle impostazioni.
+- Contenuti **DRM** (Netflix, Apple TV+, Disney+): schermo nero — protezione FairPlay di sistema,
+  vale per ogni ricevitore AirPlay open source.
+- Latenza del puntatore ~0.3–1s (strutturale di AirPlay; il video resta fluido).
+- Solo stessa sottorete (niente AWDL). Per la fluidità massima: Ethernet o Wi-Fi 5GHz.
 
-## Struttura
-- `apk/` — build APK di CiakMirror (quando pronta)
-- `docs/` — appunti di test e guida
-- (`vendor-test/` locale, non versionata: APK di terze parti per i confronti)
-
-## Licenza
-**GPL-3.0** — l'app deriva da codice GPL (UxPlay/iMirror). Vedi [NOTICE.md](NOTICE.md).
+## Licenza e crediti
+**GPL-3.0** — basato su [iMirror](https://github.com/prat3ik/iMirror) di prat3ik (GPL-3.0),
+sul server [UxPlay](https://github.com/FDH2/UxPlay) (LGPL-2.1+), su
+[playfair](https://github.com/EstebanKubata/playfair) (GPL) e su FFmpeg.
+Vedi [NOTICE.md](NOTICE.md). Apple, AirPlay, iPhone, iPad, Mac e macOS sono marchi di Apple Inc.:
+questo progetto non è affiliato né approvato da Apple.

@@ -104,4 +104,17 @@
     <string name="content_desc_cast_icon">Icona protocollo Google Cast</string>
     <string name="content_desc_status_dot">Indicatore di stato</string>
 
+    <!-- ── Aggiornamenti (installazioni sideload) ──────────────── -->
+    <string name="update_title">Aggiornamento disponibile — iMirror %1$s</string>
+    <string name="update_message">È disponibile una nuova versione di iMirror. Scaricarla e installarla adesso?</string>
+    <string name="update_now">Aggiorna</string>
+    <string name="update_later">Più tardi</string>
+    <string name="update_failed">Download non riuscito — riprova più tardi</string>
+
+    <!-- ── Licenze e sorgente ──────────────────────────────────── -->
+    <string name="setting_licenses">Licenze e codice sorgente</string>
+    <string name="licenses_title">Licenze e codice sorgente</string>
+    <string name="licenses_body">iMirror è software libero, con licenza GPL-3.0.\n\nBasato sul progetto open source iMirror di prat3ik (GPL-3.0), sul server AirPlay UxPlay (LGPL-2.1+), sull\'implementazione FairPlay playfair (GPL) e su FFmpeg.\n\nCodice sorgente: github.com/pietroMastro92/ciakmirror\n\nApple, AirPlay, iPhone, iPad, Mac e macOS sono marchi di Apple Inc. Questa app non è affiliata né approvata da Apple. I contenuti protetti da DRM non possono essere proiettati.</string>
+    <string name="licenses_open_source">Pagina open source</string>
+
 </resources>

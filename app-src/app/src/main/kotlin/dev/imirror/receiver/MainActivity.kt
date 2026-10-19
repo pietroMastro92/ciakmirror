@@ -103,6 +103,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Controlla aggiornamenti (solo installazioni sideload; silenzioso se offline)
+        dev.imirror.receiver.util.UpdateChecker.check(this)
+
         Timber.d("MainActivity created")
         bindViews()
         setupOverlayScreens()

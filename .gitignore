@@ -10,3 +10,6 @@ vendor-test/
 .cxx/
 app/release/
 *.keystore
+*.jks
+keystore/
+keystore.properties

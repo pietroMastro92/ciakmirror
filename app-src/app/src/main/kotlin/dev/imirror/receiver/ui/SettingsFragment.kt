@@ -58,6 +58,7 @@ class SettingsFragment : Fragment() {
     private lateinit var rowForceHighRes: View
     private lateinit var textVersionValue: TextView
     private lateinit var rowReset: LinearLayout
+    private lateinit var rowLicenses: LinearLayout
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_settings, container, false)
@@ -94,6 +95,7 @@ class SettingsFragment : Fragment() {
         rowForceHighRes     = view.findViewById(R.id.row_force_high_res)
         textVersionValue    = view.findViewById(R.id.text_version_value)
         rowReset            = view.findViewById(R.id.row_reset)
+        rowLicenses         = view.findViewById(R.id.row_licenses)
     }
 
     /** Sets all section header titles from string resources. */
@@ -185,6 +187,27 @@ class SettingsFragment : Fragment() {
         setToggleListener(rowForceHighRes) { enabled -> save { it.copy(forceHighResolution = enabled) } }
 
         rowReset.setOnClickListener { resetSettings() }
+        rowLicenses.setOnClickListener { showLicensesDialog() }
+    }
+
+    /** Mostra le licenze del progetto e il link al codice sorgente. */
+    private fun showLicensesDialog() {
+        val url = "https://github.com/pietroMastro92/ciakmirror"
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.licenses_title)
+            .setMessage(R.string.licenses_body)
+            .setPositiveButton(R.string.licenses_open_source) { _, _ ->
+                runCatching {
+                    startActivity(
+                        android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(url)
+                        )
+                    )
+                }
+            }
+            .setNegativeButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun setToggleListener(row: View, onChanged: (Boolean) -> Unit) {
