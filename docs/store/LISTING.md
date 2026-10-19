@@ -69,3 +69,35 @@ mirror to tv, airscreen alternative, ricevitore airplay
 - GPL-3.0: vendita consentita, sorgente pubblico obbligatorio ✓ (repo pubblico)
 - Nessun marchio Apple nel nome/icona; disclaimer presente ✓
 - FairPlay: area grigia nota (precedenti commerciali: AirScreen, AirMirror, jqssun)
+
+## Lingue dell'app (v1.7.0)
+**Italiano · Inglese · Cinese (semplificato) · Tedesco · Spagnolo**
+
+## Descrizioni extra per la scheda store (facoltative)
+### Cinese (zh)
+iMirror 将你的 Fire TV 变成 AirPlay 接收器：iPhone、iPad 和 Mac 可在“屏幕镜像”中直接看到电视并投射屏幕与声音。
+• 最高 1440p 硬件解码，流畅清晰
+• 低延迟音频（约 120 毫秒）
+• 支持遥控器操作，可自定义设备名称与配对 PIN
+使用方法：在电视上打开 iMirror，然后在 Mac/iPhone：控制中心 → 屏幕镜像 → iMirror。
+注意：受 DRM 保护的内容（Netflix、Apple TV+、Disney+）无法投射。本应用与 Apple 无关联。
+
+### Tedesco (de)
+Verwandle deinen Fire TV in einen AirPlay-Empfänger: iPhone, iPad und Mac sehen den
+Fernseher im Menü „Bildschirm spiegeln“.
+• Bis zu 1440p mit Hardware-Decodierung
+• Audio mit geringer Latenz (~120 ms)
+• Fernbedienungsfreundlich, Gerätename und PIN optional
+Anleitung: iMirror am TV öffnen, dann am Mac/iPhone: Kontrollzentrum → Bildschirm spiegeln → iMirror.
+Hinweis: DRM-geschützte Inhalte (Netflix, Apple TV+, Disney+) können nicht gespiegelt werden.
+Nicht mit Apple verbunden.
+
+### Spagnolo (es)
+Convierte tu Fire TV en un receptor AirPlay: iPhone, iPad y Mac ven la TV en el menú
+«Duplicar pantalla».
+• Hasta 1440p con decodificación por hardware
+• Audio con baja latencia (~120 ms)
+• Compatible con el mando, nombre de dispositivo y PIN opcionales
+Cómo usarlo: abre iMirror en la TV y, en tu Mac/iPhone: Centro de Control → Duplicar pantalla → iMirror.
+Nota: el contenido protegido con DRM (Netflix, Apple TV+, Disney+) no se puede duplicar.
+No está afiliado a Apple.

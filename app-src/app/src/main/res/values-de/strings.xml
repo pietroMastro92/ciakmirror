@@ -1,88 +1,120 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    strings.xml — Deutsch (de)
-
-    Nur Strings, die sich vom Englischen unterscheiden, müssen hier aufgeführt werden.
-    Fehlende Strings werden automatisch aus dem englischen Basis-File (values/strings.xml) übernommen.
+    strings.xml — Deutsch (German)
+    Mit dem Englischen identische Schlüssel können weggelassen werden (siehe values/strings.xml).
 -->
 <resources>
 
-    <!-- ── Navigation ──────────────────────────────────────────── -->
-    <string name="nav_home">Startseite</string>
+    <!-- ── Navigation ───────────────────────────────────────────── -->
+    <string name="nav_home">Start</string>
     <string name="nav_settings">Einstellungen</string>
 
-    <!-- ── HomeFragment ────────────────────────────────────────── -->
+    <!-- ── Startbildschirm ──────────────────────────────────────── -->
     <string name="home_title">Bereit für Verbindungen</string>
+    <!-- %1$s = Gerätename, der Sendern angezeigt wird -->
     <string name="home_device_visible_as">Sichtbar als: %1$s</string>
 
-    <!-- ── Protocol states ─────────────────────────────────────── -->
+    <!-- ── Protokoll-Status ─────────────────────────────────────── -->
     <string name="protocol_state_disabled">Deaktiviert</string>
-    <string name="protocol_state_advertising">Suche nach Geräten…</string>
+    <string name="protocol_state_advertising">Wartet</string>
     <string name="protocol_state_connected">Verbunden</string>
     <string name="protocol_state_error">Fehler</string>
 
-    <!-- ── Protocol card detail lines ──────────────────────────── -->
-    <string name="protocol_detail_disabled">In Einstellungen aktivieren</string>
-    <string name="protocol_detail_waiting">Warte auf Sender…</string>
+    <!-- ── Protokoll-Karte Details ──────────────────────────────── -->
+    <string name="protocol_detail_disabled">In den Einstellungen aktivieren</string>
+    <string name="protocol_detail_waiting">Warte auf Gerät…</string>
+    <!-- %1$s = Name des Senders -->
     <string name="protocol_detail_connected">Streaming von %1$s</string>
     <string name="protocol_detail_error">WLAN-Einstellungen prüfen</string>
 
-    <!-- ── Service states ──────────────────────────────────────── -->
+    <!-- ── Dienst-Status ────────────────────────────────────────── -->
     <string name="service_state_running">Aktiv</string>
     <string name="service_state_stopped">Gestoppt</string>
     <string name="service_state_restarting">Neustart…</string>
-    <string name="service_state_error">Fehler</string>
 
-    <!-- ── Section headers ─────────────────────────────────────── -->
+    <!-- ── Abschnittstitel ──────────────────────────────────────── -->
     <string name="section_protocols">Protokolle</string>
-    <string name="section_controls">Dienst-Steuerung</string>
+    <string name="section_controls">Dienststeuerung</string>
 
-    <!-- ── Control buttons ─────────────────────────────────────── -->
+    <!-- ── Schaltflächen ────────────────────────────────────────── -->
     <string name="action_start">Starten</string>
     <string name="action_stop">Stoppen</string>
-    <string name="action_restart">Neustart</string>
+    <string name="action_restart">Neu starten</string>
 
-    <!-- ── Notification ────────────────────────────────────────── -->
+    <!-- ── Benachrichtigung ─────────────────────────────────────── -->
     <string name="notification_channel_name">iMirror-Dienst</string>
-    <string name="notification_channel_description">Benachrichtigung für den AirPlay/Miracast/Cast-Empfänger-Dienst</string>
-    <string name="notification_status_running">Empfänger aktiv — Werbung im Netzwerk</string>
+    <string name="notification_channel_description">Dauerhafte Benachrichtigung für den AirPlay/Miracast/Cast-Empfänger</string>
+    <string name="notification_status_running">Empfänger aktiv — im Netzwerk sichtbar</string>
     <string name="notification_status_stopped">Empfänger gestoppt</string>
+    <string name="notification_status_streaming">Streaming von %1$s</string>
 
-    <!-- ── Settings section headers ────────────────────────────── -->
+    <!-- ── Einstellungen: Abschnitte ────────────────────────────── -->
     <string name="settings_section_display">Anzeige</string>
-    <string name="settings_section_protocols">Protokolle</string>
-    <string name="settings_section_airplay">AirPlay</string>
     <string name="settings_section_service">Dienst</string>
     <string name="settings_section_developer">Entwickler</string>
-    <string name="settings_section_about">Über</string>
+    <string name="settings_section_about">Info</string>
 
-    <!-- ── Settings row labels ─────────────────────────────────── -->
+    <!-- ── Einstellungen: Einträge ──────────────────────────────── -->
     <string name="setting_display_name">Gerätename</string>
-    <string name="setting_display_name_system_default">Systemname wird verwendet</string>
+    <string name="setting_display_name_system_default">Systemnamen verwenden</string>
+    <string name="setting_display_name_dialog_hint">Leer lassen = Systemname</string>
+    <string name="setting_display_name_reset">Auf Standard zurücksetzen</string>
+    <string name="setting_display_name_collision_note">Registriert als: %1$s</string>
     <string name="setting_airplay_enabled">AirPlay-Empfänger</string>
     <string name="setting_airplay_subtitle">Verbindungen von macOS akzeptieren</string>
     <string name="setting_miracast_enabled">Miracast-Empfänger</string>
     <string name="setting_miracast_subtitle">Verbindungen von Windows und Android akzeptieren</string>
-    <string name="setting_cast_enabled">Google Cast-Empfänger</string>
+    <string name="setting_cast_enabled">Google-Cast-Empfänger</string>
     <string name="setting_cast_subtitle">Verbindungen von Chrome und Android akzeptieren</string>
-    <string name="setting_mirror_audio">Spiegel-Audio</string>
-    <string name="setting_mirror_audio_subtitle">Den Ton des Macs beim Spiegeln wiedergeben</string>
-    <string name="setting_start_on_boot">Beim Starten automatisch starten</string>
+    <string name="setting_mirror_audio">Audio übertragen</string>
+    <string name="setting_mirror_audio_subtitle">Ton des Macs beim Spiegeln abspielen</string>
+    <string name="setting_pin_auth">PIN erforderlich</string>
+    <string name="setting_pin_auth_subtitle">Code auf dem TV anzeigen, der zum Verbinden eingegeben wird</string>
+    <string name="setting_start_on_boot">Beim Start ausführen</string>
     <string name="setting_debug_overlay">Debug-Overlay</string>
-    <string name="setting_debug_overlay_subtitle">FPS und Latenz auf dem Streaming-Bildschirm anzeigen</string>
+    <string name="setting_debug_overlay_subtitle">Live-FPS, Warteschlange und Drops anzeigen</string>
+    <string name="setting_force_high_res">Höhere Auflösung (1440p)</string>
+    <string name="setting_force_high_res_subtitle">Schärferes Spiegeln; mehr CPU. Aus = 1080p</string>
     <string name="setting_version">Version</string>
-    <string name="setting_reset_defaults">Auf Standardwerte zurücksetzen</string>
+    <string name="setting_reset_defaults">Auf Standard zurücksetzen</string>
 
-    <!-- ── Waiting screen ──────────────────────────────────────── -->
+    <!-- ── Wartebildschirm ──────────────────────────────────────── -->
     <string name="waiting_title">Bereit für AirPlay</string>
-    <string name="waiting_subtitle">Öffne AirPlay auf deinem Mac und wähle dieses Gerät</string>
+    <string name="waiting_subtitle">AirPlay am Mac öffnen und dieses Gerät wählen</string>
     <string name="waiting_device_label">Dieses Gerät:</string>
-    <string name="streaming_hint">Zurück drücken zum Beenden</string>
+    <string name="streaming_hint">Zurück drücken, um das Streaming zu beenden</string>
 
-    <!-- ── Error messages ──────────────────────────────────────── -->
+    <!-- ── Wiedergabe ───────────────────────────────────────────── -->
+    <string name="now_playing_audio">Audio wird abgespielt</string>
+    <string name="now_playing_from">Audio von %1$s</string>
+
+    <!-- ── Kopplungs-PIN ────────────────────────────────────────── -->
+    <string name="pairing_pin_title">AirPlay-Kopplungscode</string>
+    <string name="pairing_pin_hint">Diesen Code am Gerät eingeben, um zu verbinden</string>
+
+    <!-- ── Fehlermeldungen ──────────────────────────────────────── -->
     <string name="error_network_unavailable">Keine WLAN-Verbindung. Bitte mit WLAN verbinden.</string>
     <string name="error_mdns_failed">Netzwerk-Ankündigung fehlgeschlagen.</string>
     <string name="error_wifi_p2p_unavailable">Miracast wird auf diesem Gerät nicht unterstützt.</string>
-    <string name="error_cast_unavailable">Google Cast erfordert Google Play-Dienste (auf diesem Gerät nicht verfügbar).</string>
+    <string name="error_cast_unavailable">Google Cast benötigt Google Play-Dienste (auf diesem Gerät nicht verfügbar).</string>
+
+    <!-- ── Barrierefreiheit ─────────────────────────────────────── -->
+    <string name="content_desc_airplay_icon">AirPlay-Protokoll-Symbol</string>
+    <string name="content_desc_miracast_icon">Miracast-Protokoll-Symbol</string>
+    <string name="content_desc_cast_icon">Google-Cast-Protokoll-Symbol</string>
+    <string name="content_desc_status_dot">Statusanzeige</string>
+
+    <!-- ── Update (Sideload-Installationen) ─────────────────────── -->
+    <string name="update_title">Update verfügbar — iMirror %1$s</string>
+    <string name="update_message">Eine neue Version von iMirror ist verfügbar. Jetzt herunterladen und installieren?</string>
+    <string name="update_now">Aktualisieren</string>
+    <string name="update_later">Später</string>
+    <string name="update_failed">Download fehlgeschlagen — später erneut versuchen</string>
+
+    <!-- ── Lizenzen &amp; Quellcode ─────────────────────────────── -->
+    <string name="setting_licenses">Lizenzen &amp; Quellcode</string>
+    <string name="licenses_title">Lizenzen &amp; Quellcode</string>
+    <string name="licenses_body">iMirror ist freie Software, lizenziert unter GPL-3.0.\n\nBasiert auf dem Open-Source-Projekt iMirror von prat3ik (GPL-3.0), dem UxPlay-AirPlay-Server (LGPL-2.1+), der playfair-FairPlay-Implementierung (GPL) und FFmpeg.\n\nQuellcode: github.com/pietroMastro92/ciakmirror\n\nApple, AirPlay, iPhone, iPad, Mac und macOS sind Marken von Apple Inc. Diese App ist nicht mit Apple verbunden und wird nicht von Apple unterstützt. DRM-geschützte Inhalte können nicht gespiegelt werden.</string>
+    <string name="licenses_open_source">Open-Source-Seite</string>
 
 </resources>

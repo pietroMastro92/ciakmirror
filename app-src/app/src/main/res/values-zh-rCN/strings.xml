@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    strings.xml — 简体中文 (Chinese, Simplified)
+    与英文一致的字串可省略（见 values/strings.xml）。
+-->
+<resources>
+
+    <!-- ── 导航 ─────────────────────────────────────────────────── -->
+    <string name="nav_home">主页</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- ── 主页 ─────────────────────────────────────────────────── -->
+    <string name="home_title">准备连接</string>
+    <!-- %1$s = 发送端显示的设备名称 -->
+    <string name="home_device_visible_as">显示为：%1$s</string>
+
+    <!-- ── 协议状态 ─────────────────────────────────────────────── -->
+    <string name="protocol_state_disabled">已停用</string>
+    <string name="protocol_state_advertising">等待中</string>
+    <string name="protocol_state_connected">已连接</string>
+    <string name="protocol_state_error">错误</string>
+
+    <!-- ── 协议卡片详情 ─────────────────────────────────────────── -->
+    <string name="protocol_detail_disabled">请在设置中启用</string>
+    <string name="protocol_detail_waiting">正在等待设备…</string>
+    <!-- %1$s = 发送端名称 -->
+    <string name="protocol_detail_connected">正在投射 %1$s</string>
+    <string name="protocol_detail_error">请检查 Wi-Fi 设置</string>
+
+    <!-- ── 服务状态 ─────────────────────────────────────────────── -->
+    <string name="service_state_running">运行中</string>
+    <string name="service_state_stopped">已停止</string>
+    <string name="service_state_restarting">正在重启…</string>
+
+    <!-- ── 分区标题 ─────────────────────────────────────────────── -->
+    <string name="section_protocols">协议</string>
+    <string name="section_controls">服务控制</string>
+
+    <!-- ── 按钮 ─────────────────────────────────────────────────── -->
+    <string name="action_start">启动</string>
+    <string name="action_stop">停止</string>
+    <string name="action_restart">重启</string>
+
+    <!-- ── 通知 ─────────────────────────────────────────────────── -->
+    <string name="notification_channel_name">iMirror 服务</string>
+    <string name="notification_channel_description">AirPlay/Miracast/Cast 接收服务的常驻通知</string>
+    <string name="notification_status_running">接收器已启动 — 正在网络中广播</string>
+    <string name="notification_status_stopped">接收器已停止</string>
+    <string name="notification_status_streaming">正在投射 %1$s</string>
+
+    <!-- ── 设置分区 ─────────────────────────────────────────────── -->
+    <string name="settings_section_display">显示</string>
+    <string name="settings_section_service">服务</string>
+    <string name="settings_section_developer">开发者</string>
+    <string name="settings_section_about">关于</string>
+
+    <!-- ── 设置项 ───────────────────────────────────────────────── -->
+    <string name="setting_display_name">设备名称</string>
+    <string name="setting_display_name_system_default">使用系统设备名称</string>
+    <string name="setting_display_name_dialog_hint">留空则使用系统设备名称</string>
+    <string name="setting_display_name_reset">恢复默认</string>
+    <string name="setting_display_name_collision_note">注册为：%1$s</string>
+    <string name="setting_airplay_enabled">AirPlay 接收器</string>
+    <string name="setting_airplay_subtitle">接受来自 macOS 的连接</string>
+    <string name="setting_miracast_enabled">Miracast 接收器</string>
+    <string name="setting_miracast_subtitle">接受来自 Windows 和 Android 的连接</string>
+    <string name="setting_cast_enabled">Google Cast 接收器</string>
+    <string name="setting_cast_subtitle">接受来自 Chrome 和 Android 的连接</string>
+    <string name="setting_mirror_audio">投射音频</string>
+    <string name="setting_mirror_audio_subtitle">投射时播放 Mac 的声音</string>
+    <string name="setting_pin_auth">需要配对 PIN 码</string>
+    <string name="setting_pin_auth_subtitle">在电视上显示连接所需的代码</string>
+    <string name="setting_start_on_boot">开机自启</string>
+    <string name="setting_debug_overlay">调试信息叠加层</string>
+    <string name="setting_debug_overlay_subtitle">显示实时 FPS、队列与丢帧统计</string>
+    <string name="setting_force_high_res">更高分辨率（1440p）</string>
+    <string name="setting_force_high_res_subtitle">镜像更清晰；占用更多 CPU。关闭 = 1080p</string>
+    <string name="setting_version">版本</string>
+    <string name="setting_reset_defaults">恢复默认设置</string>
+
+    <!-- ── 等待界面 ─────────────────────────────────────────────── -->
+    <string name="waiting_title">准备接收 AirPlay</string>
+    <string name="waiting_subtitle">在 Mac 上打开 AirPlay 并选择此设备</string>
+    <string name="waiting_device_label">此设备：</string>
+    <string name="streaming_hint">按返回键停止投射</string>
+
+    <!-- ── 正在播放 ─────────────────────────────────────────────── -->
+    <string name="now_playing_audio">正在播放音频</string>
+    <string name="now_playing_from">来自 %1$s 的音频</string>
+
+    <!-- ── 配对 PIN ─────────────────────────────────────────────── -->
+    <string name="pairing_pin_title">AirPlay 配对码</string>
+    <string name="pairing_pin_hint">请在设备上输入此代码以连接</string>
+
+    <!-- ── 错误提示 ─────────────────────────────────────────────── -->
+    <string name="error_network_unavailable">无 Wi-Fi 连接。请连接 Wi-Fi。</string>
+    <string name="error_mdns_failed">网络广播失败。</string>
+    <string name="error_wifi_p2p_unavailable">此设备不支持 Miracast。</string>
+    <string name="error_cast_unavailable">Google Cast 需要 Google Play 服务（此设备不可用）。</string>
+
+    <!-- ── 无障碍 ───────────────────────────────────────────────── -->
+    <string name="content_desc_airplay_icon">AirPlay 协议图标</string>
+    <string name="content_desc_miracast_icon">Miracast 协议图标</string>
+    <string name="content_desc_cast_icon">Google Cast 协议图标</string>
+    <string name="content_desc_status_dot">状态指示器</string>
+
+    <!-- ── 更新（侧载安装） ─────────────────────────────────────── -->
+    <string name="update_title">有可用更新 — iMirror %1$s</string>
+    <string name="update_message">新版本 iMirror 已发布。现在下载并安装吗？</string>
+    <string name="update_now">更新</string>
+    <string name="update_later">稍后</string>
+    <string name="update_failed">下载失败 — 请稍后再试</string>
+
+    <!-- ── 许可与源代码 ─────────────────────────────────────────── -->
+    <string name="setting_licenses">许可与源代码</string>
+    <string name="licenses_title">许可与源代码</string>
+    <string name="licenses_body">iMirror 是自由软件，采用 GPL-3.0 许可。\n\n基于 prat3ik 的开源项目 iMirror（GPL-3.0）、UxPlay AirPlay 服务器（LGPL-2.1+）、playfair FairPlay 实现（GPL）以及 FFmpeg。\n\n源代码：github.com/pietroMastro92/ciakmirror\n\nApple、AirPlay、iPhone、iPad、Mac 和 macOS 是 Apple Inc. 的商标。本应用与 Apple 无关联，也未获得其认可。受 DRM 保护的内容无法投射。</string>
+    <string name="licenses_open_source">开源页面</string>
+
+</resources>
