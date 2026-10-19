@@ -42,7 +42,7 @@
     <string name="action_restart">Riavvia</string>
 
     <!-- ── Notifica ────────────────────────────────────────────── -->
-    <string name="notification_channel_name">Servizio CiakMirror</string>
+    <string name="notification_channel_name">Servizio iMirror</string>
     <string name="notification_channel_description">Notifica del ricevitore AirPlay/Miracast/Cast</string>
     <string name="notification_status_running">Ricevitore attivo — visibile in rete</string>
     <string name="notification_status_stopped">Ricevitore fermo</string>

@@ -27,7 +27,7 @@ data class AppSettings(
      * If empty, the Android device name is used as a fallback.
      * Validated: max 63 characters, must not be blank after trimming.
      */
-    val displayName: String = "CiakMirror",
+    val displayName: String = "iMirror",
 
     // ─── Protocols ─────────────────────────────────────────────────────────
     /**
