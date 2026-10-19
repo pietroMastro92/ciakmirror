@@ -84,7 +84,12 @@ class MirrorStreamServer(
     private fun runReader() {
         try {
             Logger.i("MirrorStreamServer listening on data port $dataPort")
-            val socket = serverSocket.accept().also { client = it }
+            val socket = serverSocket.accept().also {
+                client = it
+                // Buffer di ricezione compatto: limita quanto video può accumularsi nel kernel
+                // se l'app resta indietro (bassa latenza; il TCP fa da backpressure al Mac).
+                runCatching { it.receiveBufferSize = 128 * 1024 }
+            }
             Logger.i("Mirror data connection from ${socket.inetAddress.hostAddress}")
             val input = socket.getInputStream()
             val header = ByteArray(128)
@@ -124,7 +129,8 @@ class MirrorStreamServer(
             queue.poll()
             queue.offer(item)
             framesDropped++
-            awaitingKeyframe = true        // a frame was lost — resync the decoder at the next IDR
+            // Bassa latenza: NON ci mettiamo in attesa del keyframe (eviterebbe freeze fino a
+            // 1-2s). Il decoder maschera i frame mancanti e si riallinea al prossimo IDR da solo.
         }
         StreamStats.videoQueue = queue.size
         if (framesIn % 300 == 0) {
@@ -267,7 +273,7 @@ class MirrorStreamServer(
     companion object {
         private const val MAX_PAYLOAD = 8 * 1024 * 1024        // 8 MB sanity cap per frame
         private const val FRAME_INTERVAL_US = 1_000_000L / 60  // monotonic PTS hint (~60fps)
-        private const val QUEUE_CAPACITY = 90                  // ~1.5s @60fps before dropping
+        private const val QUEUE_CAPACITY = 8                   // ~130ms @60fps: priorità alla latenza (era 90 ≈ 1.5s!)
         private const val SURFACE_WAIT_TRIES = 50
         private const val SURFACE_WAIT_MS = 100L
     }
