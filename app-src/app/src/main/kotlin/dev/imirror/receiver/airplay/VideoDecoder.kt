@@ -117,9 +117,6 @@ class VideoDecoder(private val outputSurface: Surface) {
             // (~33-50 ms at 60 fps).
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
-            } else {
-                // Chiave "raw" storica: alcuni codec vendor (Fire OS/Android 7-10) la onorano.
-                setInteger("low-latency", 1)
             }
 
             // Realtime priority — 0 = realtime, 1 = best-effort. Tells the codec scheduler
@@ -289,9 +286,9 @@ class VideoDecoder(private val outputSurface: Surface) {
 
     companion object {
         // How long to wait for an input buffer before dropping (microseconds).
-        // 20ms — bassa latenza: se il decoder è occupato, meglio scartare subito il NAL che
-        // accumulare ritardo (il concealment copre il buco; resync al prossimo IDR).
-        private const val INPUT_BUFFER_TIMEOUT_US = 20_000L
+        // 100ms — generous enough that the decoder rarely has to drop a NAL unit (which would
+        // corrupt the stream), while still bounding stall if the codec is truly wedged.
+        private const val INPUT_BUFFER_TIMEOUT_US = 100_000L
 
         /**
          * Parses the H.264 SPS NAL unit to extract the actual video resolution.

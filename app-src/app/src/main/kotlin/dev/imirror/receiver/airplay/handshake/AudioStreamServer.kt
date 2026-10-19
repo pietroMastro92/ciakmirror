@@ -433,7 +433,7 @@ class AudioStreamServer(
         private const val MAX_RESEND_RANGE = 128
 
         // Jitter buffer depth between the receive and playback threads (~1 s at 92 frames/s).
-        private const val AUDIO_QUEUE_CAPACITY = 12              // ~120ms (AAC-ELD 10ms/frame): audio allineato al video (era 96 ≈ 1s!)
+        private const val AUDIO_QUEUE_CAPACITY = 96
 
         // Sliding window of recently-played RTP sequence numbers for duplicate suppression.
         // ~11 s at 92 packets/s — far longer than any retransmit gap, far shorter than the
