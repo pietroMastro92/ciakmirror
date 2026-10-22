@@ -103,8 +103,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Controlla aggiornamenti (solo installazioni sideload; silenzioso se offline)
-        dev.imirror.receiver.util.UpdateChecker.check(this)
+        // Self-updater SOLO per le build sideload: la build Amazon si aggiorna
+        // esclusivamente tramite l'Amazon Appstore (nessun download di APK).
+        if (BuildConfig.FLAVOR != "amazon") {
+            dev.imirror.receiver.util.UpdateChecker.check(this)
+        }
 
         Timber.d("MainActivity created")
         bindViews()

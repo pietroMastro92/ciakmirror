@@ -19,8 +19,8 @@ android {
         // 25 = Android 7.1. Covers Fire TV, older Android TV boxes, and phones used for testing.
         minSdk = 25
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.7.0"
+        versionCode = 9
+        versionName = "1.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -59,6 +59,21 @@ android {
     // Release signing: credentials are injected via environment variables in CI.
     // Set KEYSTORE_PATH, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD to enable.
     // Local builds without these vars produce unsigned release APKs (fine for dev/test).
+    // ── Flavor di distribuzione ──────────────────────────────────────────────
+    // sideload : APK per installazione manuale (include il self-updater GitHub)
+    // amazon   : build per Amazon Appstore (NESSUN updater, NESSUN permesso di
+    //            installazione pacchetti: si aggiorna solo dallo store)
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("sideload") {
+            dimension = "distribution"
+            isDefault = true
+        }
+        create("amazon") {
+            dimension = "distribution"
+        }
+    }
+
     val keystorePath = System.getenv("KEYSTORE_PATH")
     if (keystorePath != null) {
         signingConfigs {
