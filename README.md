@@ -31,10 +31,18 @@ nulla sui dispositivi Apple.
 - **Store** (prossimamente su Google Play / Amazon Appstore): aggiornamenti automatici.
 
 ## Compilazione
+Il progetto ha **due flavor** di distribuzione:
+
+| Flavor | Uso | Self-updater |
+|---|---|---|
+| `amazon` | build per **Amazon Appstore** | ❌ nessuno (aggiornamenti solo dallo store) |
+| `sideload` | APK su GitHub Releases (installazione manuale) | ✅ controlla le Release GitHub |
+
 ```bash
 # Firma release (keystore NON nel repo):
 export KEYSTORE_PATH=.../keystore/imirror-release.jks KEYSTORE_PASSWORD=... KEY_ALIAS=imirror KEY_PASSWORD=...
-./gradlew assembleRelease    # AAB per Play: bundleRelease
+./gradlew assembleAmazonRelease    # APK per lo store
+./gradlew assembleSideloadRelease  # APK per GitHub (con updater)
 ```
 Richiede JDK 17+, Android SDK con **NDK 28.2.13676358** e **CMake 3.22.1**.
 
