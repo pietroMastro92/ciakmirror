@@ -127,6 +127,8 @@ class AirPlayVideoPlayer(
                 prepared = false
                 playing = false
                 onError(error.errorCodeName)
+                // Show the localized message, then leave the black overlay instead of staying stuck.
+                onEnded()
             }
         })
 

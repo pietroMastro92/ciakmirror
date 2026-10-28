@@ -67,6 +67,12 @@ open class RtspHandler(
     private val onVideoStop: () -> Unit = {},
     /** Current URL-video playback snapshot for GET /playback-info and GET /scrub. */
     private val onPlaybackInfo: () -> dev.imirror.receiver.airplay.PlaybackInfo? = { null },
+    /**
+     * True while AirPlay URL video owns playback. Safari-style senders may close the RTSP control
+     * connection right after POST /play and poll /playback-info on NEW connections: the player must
+     * survive those disconnects. Mirroring (which streams over the control socket) still stops.
+     */
+    private val isUrlVideoActive: () -> Boolean = { false },
     /** Sender's DACP reverse-control identity from RTSP headers (DACP-ID + Active-Remote token). */
     private val onRemoteControlInfo: (dacpId: String?, activeRemote: String?) -> Unit = { _, _ -> },
     /** When true, require HomeKit-style SRP PIN pairing before streaming (gated by AppSettings). */
@@ -266,7 +272,13 @@ open class RtspHandler(
             isMirrorSession = false
             activeStreamTypes.clear()
             setupCount = 0
-            onStreamingStopped()
+            if (isUrlVideoActive()) {
+                // URL video fetches the media itself and is driven by separate requests
+                // (/playback-info, /rate, /stop). A control-socket close is NOT a stop.
+                Logger.i("Control connection closed — URL video keeps playing")
+            } else {
+                onStreamingStopped()
+            }
         }
     }
 
@@ -331,33 +343,75 @@ open class RtspHandler(
     /** POST /play — a media URL to play (binary/XML plist or legacy text body). */
     private fun handleVideoPlay(request: RtspRequest): RtspResponse {
         val (url, start) = parsePlayBody(request)
+        val contentType = request.headers["Content-Type"] ?: "-"
+        android.util.Log.i("iMirrorPlay", "POST /play ct=$contentType len=${request.bodyBytes.size} url=$url start=$start")
         if (url.isNullOrBlank()) {
+            android.util.Log.w(
+                "iMirrorPlay",
+                "unparsed /play body head=${request.body.take(300).replace('\n', ' ')} " +
+                    "hex=${request.bodyBytes.take(16).joinToString("") { "%02x".format(it) }}"
+            )
             Logger.w("POST /play with no Content-Location")
-            return RtspResponse(400, "Bad Request", protocol = request.responseProtocol())
+            return RtspResponse(400, "Bad Request", headers = request.sessionHeaders(), protocol = request.responseProtocol())
         }
         Logger.i("POST /play url=$url start=$start")
         onVideoPlay(url, start)
-        return RtspResponse(200, "OK", protocol = request.responseProtocol())
+        return RtspResponse(200, "OK", headers = request.sessionHeaders(), protocol = request.responseProtocol())
     }
 
-    /** Extracts the media URL + start fraction from a /play body (plist `Content-Location` or text). */
+    /** Echo the sender's Session id, if any: iOS/macOS abort URL playback when it is missing. */
+    private fun RtspRequest.sessionHeaders(): Map<String, String> {
+        val session = headers["Session"] ?: headers["session"] ?: return emptyMap()
+        return mapOf("Session" to session)
+    }
+
+    /**
+     * Extracts the media URL + start fraction from a /play body.
+     *
+     * Accepts every shape seen in the wild:
+     *  1. Apple plist — binary (`bplist00`) or XML (`<plist>`) — key `Content-Location`;
+     *  2. legacy `Content-Location: <url>` text body;
+     *  3. `Content-Location` request header;
+     *  4. last resort: first http(s) URL found in the body.
+     */
     private fun parsePlayBody(request: RtspRequest): Pair<String?, Double> {
-        if (request.isPlistBody()) {
-            val p = runCatching { PlistCodec.decode(request.bodyBytes) }.getOrNull() ?: return null to 0.0
-            val url = p["Content-Location"] as? String
-            val start = (p["Start-Position"] as? Double) ?: 0.0
-            return url to start
-        }
-        // Legacy text body: "Content-Location: <url>\r\nStart-Position: <float>\r\n"
-        var url: String? = null
         var start = 0.0
+
+        if (request.isPlistBody()) {
+            val p = runCatching { PlistCodec.decode(request.bodyBytes) }.getOrNull()
+            if (p != null) {
+                val rawUrl = p["Content-Location"] ?: p["content-location"]
+                val url = when (rawUrl) {
+                    is String -> rawUrl
+                    null -> null
+                    else -> rawUrl.toString().takeIf { it.startsWith("http") }
+                }
+                val rawStart = p["Start-Position"] ?: p["start-position"]
+                start = when (rawStart) {
+                    is Number -> rawStart.toDouble()
+                    is String -> rawStart.toDoubleOrNull() ?: 0.0
+                    else -> 0.0
+                }
+                if (!url.isNullOrBlank()) return url to start
+            }
+        }
+
+        // Legacy text body: "Content-Location: <url>\r\nStart-Position: <float>\r\n"
+        var textUrl: String? = null
         request.body.lineSequence().forEach { line ->
             when {
-                line.startsWith("Content-Location:", true) -> url = line.substringAfter(":").trim()
+                line.startsWith("Content-Location:", true) -> textUrl = line.substringAfter(":").trim()
                 line.startsWith("Start-Position:", true) -> start = line.substringAfter(":").trim().toDoubleOrNull() ?: 0.0
             }
         }
-        return url to start
+        textUrl?.takeIf { it.isNotBlank() }?.let { return it to start }
+
+        // Some senders put the URL in a header instead of the body.
+        request.headers["Content-Location"]?.takeIf { it.isNotBlank() }?.let { return it to start }
+
+        // Unknown shape: grab the first absolute URL in the body.
+        val match = Regex("""https?://[^\s"'<>]+""").find(request.body)
+        return (match?.value) to start
     }
 
     /** POST /rate?value=X — X=0 pause, X≥1 resume. */
@@ -365,7 +419,7 @@ open class RtspHandler(
         val rate = queryParam(request.uri, "value")?.toFloatOrNull() ?: 1f
         Logger.d("POST /rate value=$rate")
         onVideoRate(rate)
-        return RtspResponse(200, "OK", protocol = request.responseProtocol())
+        return RtspResponse(200, "OK", headers = request.sessionHeaders(), protocol = request.responseProtocol())
     }
 
     /** POST /scrub?position=N — seek to N seconds. */
@@ -388,7 +442,7 @@ open class RtspHandler(
     private fun handleVideoStop(request: RtspRequest): RtspResponse {
         Logger.i("POST /stop (video URL)")
         onVideoStop()
-        return RtspResponse(200, "OK", protocol = request.responseProtocol())
+        return RtspResponse(200, "OK", headers = request.sessionHeaders(), protocol = request.responseProtocol())
     }
 
     /** GET /playback-info — XML plist describing current position/duration/rate/ready state. */
@@ -1011,5 +1065,9 @@ private fun RtspRequest.responseProtocol(): String =
     if (protocol.startsWith("HTTP/")) protocol else "RTSP/1.0"
 
 /** True if the body is an Apple binary plist (AirPlay 2 mirroring SETUP), vs legacy SDP. */
-private fun RtspRequest.isPlistBody(): Boolean =
-    bodyBytes.size >= 8 && String(bodyBytes, 0, 8, Charsets.US_ASCII) == "bplist00"
+private fun RtspRequest.isPlistBody(): Boolean {
+    if (bodyBytes.size >= 8 && String(bodyBytes, 0, 8, Charsets.US_ASCII) == "bplist00") return true
+    // XML plist (some iOS/macOS AirPlay senders use text/x-apple-plist+xml for /play).
+    val head = String(bodyBytes, 0, minOf(64, bodyBytes.size), Charsets.US_ASCII).trimStart()
+    return head.startsWith("<?xml") || head.startsWith("<plist") || head.startsWith("<!DOCTYPE")
+}

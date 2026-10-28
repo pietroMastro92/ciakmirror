@@ -245,6 +245,7 @@ class AirPlayReceiver(
             onVideoScrub = { pos -> urlVideoPlayer?.scrub(pos) },
             onVideoStop = { stopUrlVideo() },
             onPlaybackInfo = { urlVideoPlayer?.info() },
+            isUrlVideoActive = { urlVideoPlayer != null },
             onRemoteControlInfo = { dacpId, activeRemote -> dacpClient.configure(dacpId, activeRemote) },
             pinAuthEnabled = pinAuthEnabled,
             pairingStore = pairingStore,

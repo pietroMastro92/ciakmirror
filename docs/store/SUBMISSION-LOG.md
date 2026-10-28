@@ -41,3 +41,18 @@
   - messaggio d'errore localizzato (IT/EN/ZH/DE/ES) invece del nero muto.
 - **Test su Fire Stick AFTSS (192.168.1.150)**: fMP4 Apple OK, TS Mux OK, MP4 Sintel OK.
 - APK store: `iMirror-v1.8.2-amazon-armeabi-v7a.apk` (versionCode 11, permessi invariati).
+
+## 28 ottobre 2026 — v1.8.4 (versionCode 13) — fix definitivo video Safari
+- **Sintomo**: AirPlay di un video da Safari → schermo nero e ritorno alla schermata app.
+- **Cause trovate e corrette**:
+  1. `MediaPlayer` di Fire OS non supporta HLS **fMP4/CMAF** (errore -1007) → sostituito con
+     **Media3 ExoPlayer 1.8.1** (v1.8.2).
+  2. Il parser di `POST /play` accettava solo plist **binari** o testo: aggiunto supporto a
+     **plist XML**, header `Content-Location`, fallback regex sull'URL e echo della `Session` (v1.8.3).
+  3. **Causa principale**: alla chiusura della connessione RTSP il receiver chiamava
+     `onStreamingStopped()` e uccideva il player. Safari chiude il socket subito dopo `/play`
+     → nero/ritorno all'app. Ora il **video URL sopravvive** alla chiusura del control socket
+     (il player scarica da solo); il mirroring continua a fermarsi come prima (v1.8.4).
+- **Test**: `/play` XML plist + chiusura immediata socket → `/playback-info` su nuova connessione
+  riporta position 187s e il video è visibile; `/stop` su terza connessione ferma tutto.
+- APK store: `iMirror-v1.8.4-amazon-armeabi-v7a.apk` (versionCode 13).
