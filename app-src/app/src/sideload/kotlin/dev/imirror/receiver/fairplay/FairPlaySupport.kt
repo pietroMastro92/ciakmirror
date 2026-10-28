@@ -27,7 +27,7 @@ import java.net.NetworkInterface.getNetworkInterfaces
 object FairPlaySupport {
 
     private const val ASSET = "fairplaysap-arm"
-    private const val HELPER_VERSION = "5"   // bump when the helper binary changes
+    private const val HELPER_VERSION = "6"   // bump when the helper binary changes
     private const val HELPER_PORT = 7001
     private const val HELPER_NAME = "iMirror Video"
 
@@ -170,9 +170,25 @@ object FairPlaySupport {
         Logger.i("FairPlay helper stopped")
     }
 
+    /** Publishes the real media duration (learned by ExoPlayer) to the helper. */
+    fun updateDuration(seconds: Double) {
+        if (seconds <= 0.0) return
+        Thread {
+            runCatching {
+                val connection = java.net.URL("http://127.0.0.1:7002/duration?seconds=$seconds")
+                    .openConnection() as java.net.HttpURLConnection
+                connection.connectTimeout = 800
+                connection.readTimeout = 800
+                connection.requestMethod = "GET"
+                val code = connection.responseCode
+                connection.disconnect()
+                Log.i("iMirrorFP", "duration synced: $seconds (http $code)")
+            }.onFailure { Log.e("iMirrorFP", "updateDuration failed", it) }
+        }.start()
+    }
+
     /** Registers "iMirror Video" via Android's mDNS (stable, unlike the Go helper's responder). */
-    private fun registerMdns(context: Context, txt: Map<String, String>) {
-        runCatching {
+    private fun registerMdns(context: Context, txt: Map<String, String>) {        runCatching {
             val nsd = context.getSystemService(Context.NSD_SERVICE) as NsdManager
             val info = NsdServiceInfo().apply {
                 serviceName = HELPER_NAME

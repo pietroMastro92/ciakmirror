@@ -48,6 +48,7 @@ class AirPlayVideoPlayer(
     private val surfaceProvider: () -> Surface?,
     private val onEnded: () -> Unit = {},
     private val onError: (String) -> Unit = {},
+    private val onDuration: (Double) -> Unit = {},
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var player: ExoPlayer? = null
@@ -105,6 +106,7 @@ class AirPlayVideoPlayer(
                     Player.STATE_READY -> {
                         prepared = true
                         durationMs = exo.duration.coerceAtLeast(0L)
+                        onDuration(durationMs / 1000.0)
                         exo.playWhenReady = !pausedBySender
                         android.util.Log.i(
                             "iMirrorFP",

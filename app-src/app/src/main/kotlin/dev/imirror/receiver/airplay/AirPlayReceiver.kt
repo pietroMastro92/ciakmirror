@@ -527,7 +527,10 @@ class AirPlayReceiver(
                         stopUrlVideo()
                     }
                 },
-            onError = { onVideoError() }
+            onError = { onVideoError() },
+            onDuration = { seconds ->
+                dev.imirror.receiver.fairplay.FairPlaySupport.updateDuration(seconds)
+            }
         ).also { urlVideoPlayer = it }
         player.play(url, startFraction)
         Logger.i("AirPlay URL video started: $url (start=$startFraction)")

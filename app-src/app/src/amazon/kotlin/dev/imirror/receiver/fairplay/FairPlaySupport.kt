@@ -17,4 +17,8 @@ object FairPlaySupport {
     fun stop() {
         // Intentionally empty.
     }
+
+    fun updateDuration(seconds: Double) {
+        // No helper in the Amazon build.
+    }
 }
