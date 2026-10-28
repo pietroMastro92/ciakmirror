@@ -143,6 +143,15 @@ class MirrorService : Service() {
     }
 
     /**
+     * Called by the Activity when StreamingScreen's Surface is created.
+     * URL-video playback (AirPlay /play) may have prepared before the Surface existed: without
+     * this the player decodes with no output and the TV stays black.
+     */
+    fun onVideoSurfaceReady() {
+        airPlayReceiver?.onSurfaceAvailable()
+    }
+
+    /**
      * Sends a DACP transport command (TV remote → AirPlay sender), e.g. play/pause or skip what the
      * Mac/iPhone is streaming. Bound Activities call this from media-key events. No-op if no AirPlay
      * sender has advertised a DACP identity.
@@ -257,6 +266,16 @@ class MirrorService : Service() {
             },
             onNowPlayingChanged = { info ->
                 _nowPlaying.value = info
+            },
+            onVideoError = {
+                // Black screen no more: tell the user why the URL video didn't start.
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    android.widget.Toast.makeText(
+                        applicationContext,
+                        getString(R.string.video_playback_failed),
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                }
             },
             onPinChanged = { pin ->
                 _pairingPin.value = pin

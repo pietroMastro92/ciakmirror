@@ -173,6 +173,8 @@ class MainActivity : AppCompatActivity() {
      */
     private fun setupOverlayScreens() {
         streamingScreen = StreamingScreen(this)
+        // Surface created after AirPlay URL video prepared? Let the player re-attach it.
+        streamingScreen.onSurfaceReady = { service?.onVideoSurfaceReady() }
         photoScreen = PhotoScreen(this)
         nowPlayingScreen = NowPlayingScreen(this)
         pinScreen = PinScreen(this)

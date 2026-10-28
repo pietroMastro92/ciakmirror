@@ -116,5 +116,6 @@
     <string name="licenses_title">Licencias y código fuente</string>
     <string name="licenses_body">iMirror es software libre, con licencia GPL-3.0.\n\nBasado en el proyecto de código abierto iMirror de prat3ik (GPL-3.0), el servidor AirPlay UxPlay (LGPL-2.1+), la implementación FairPlay playfair (GPL) y FFmpeg.\n\nCódigo fuente: github.com/pietroMastro92/ciakmirror\n\nApple, AirPlay, iPhone, iPad, Mac y macOS son marcas de Apple Inc. Esta app no está afiliada ni respaldada por Apple. El contenido protegido por DRM no se puede duplicar.</string>
     <string name="licenses_open_source">Página de código abierto</string>
+    <string name="video_playback_failed">No se puede reproducir el vídeo: formato no compatible o contenido protegido con DRM.</string>
 
 </resources>

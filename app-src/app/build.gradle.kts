@@ -19,8 +19,8 @@ android {
         // 25 = Android 7.1. Covers Fire TV, older Android TV boxes, and phones used for testing.
         minSdk = 25
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.8.1"
+        versionCode = 11
+        versionName = "1.8.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -209,6 +209,11 @@ dependencies {
 
     // Logging — tagged, level-filtered logs with pluggable backend
     implementation(libs.timber)
+
+    // Media3 ExoPlayer — AirPlay video URL (HLS TS/fMP4 + progressive).
+    // Fire OS's MediaPlayer rejects modern fMP4/CMAF HLS with error -1007.
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.exoplayer.hls)
 
     // Cryptography — AES-128-CTR for audio decryption, future SRP-6a pairing
     implementation(libs.bouncycastle)

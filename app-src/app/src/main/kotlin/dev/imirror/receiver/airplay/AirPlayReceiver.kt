@@ -90,6 +90,8 @@ class AirPlayReceiver(
      * surface; emits null when video is mirroring (the video screen takes over) or audio stops.
      */
     private val onNowPlayingChanged: (NowPlayingInfo?) -> Unit = {},
+    /** Called when URL-video playback fails (unsupported format, DRM, network): the UI shows an error. */
+    private val onVideoError: () -> Unit = {},
     /** Pairing PIN to show ([pin]) or hide (null) on the TV during SRP pair-setup. */
     private val onPinChanged: (pin: String?) -> Unit = {}
 ) {
@@ -498,8 +500,10 @@ class AirPlayReceiver(
         onSenderNameChanged("AirPlay")
         emitState(ProtocolState.CONNECTED)   // shows StreamingScreen → Surface becomes available
         val player = urlVideoPlayer ?: AirPlayVideoPlayer(
+            context = context,
             surfaceProvider = videoSurfaceProvider,
-            onEnded = { stopUrlVideo() }
+            onEnded = { stopUrlVideo() },
+            onError = { onVideoError() }
         ).also { urlVideoPlayer = it }
         player.play(url, startFraction)
         Logger.i("AirPlay URL video started: $url (start=$startFraction)")
@@ -511,6 +515,16 @@ class AirPlayReceiver(
         urlVideoPlayer = null
         onStreamingStopped()
         Logger.i("AirPlay URL video stopped")
+    }
+
+    /**
+     * Re-attach the video Surface to the URL-video player.
+     * Called by the Activity when StreamingScreen's SurfaceView creates its Surface, which may
+     * happen *after* ExoPlayer's `prepare()` (e.g. app brought to foreground by the stream).
+     * Without this, URL video keeps decoding with no output surface → black screen.
+     */
+    fun onSurfaceAvailable() {
+        urlVideoPlayer?.attachSurface()
     }
 
     /** Starts the AirPlay 2 buffered audio-only stream (type 103, Apple Music → TV); returns its TCP port. */

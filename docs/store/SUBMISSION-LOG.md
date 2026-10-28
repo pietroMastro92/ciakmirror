@@ -28,3 +28,16 @@
   # build sideload (tue TV + GitHub Release)
   ./gradlew assembleSideloadRelease
   ```
+
+## 28 ottobre 2026 — v1.8.2 (versionCode 11) — fix video AirPlay (Safari)
+- **Bug segnalato**: AirPlay video da Safari (tasto AirPlay) → schermo nero, nessun audio.
+- **Causa**: lo stack HLS del firmware Fire OS (MediaPlayer/NuPlayer) non supporta i playlists
+  **fMP4/CMAF** usati dai siti moderni: errore `-1007` ("Unable to parse ID3 tag"), `readyToPlay=false`.
+  Verificato anche un crash del demuxer (`PlaylistFetcher CHECK failed`) su alcuni stream TS.
+- **Fix**: `AirPlayVideoPlayer` riscritto con **Media3 ExoPlayer 1.8.1**
+  (`media3-exoplayer` + `media3-exoplayer-hls`):
+  - HLS TS, HLS fMP4/CMAF e MP4 progressivo;
+  - Surface riagganciata quando `StreamingScreen` la crea dopo il `prepare()`;
+  - messaggio d'errore localizzato (IT/EN/ZH/DE/ES) invece del nero muto.
+- **Test su Fire Stick AFTSS (192.168.1.150)**: fMP4 Apple OK, TS Mux OK, MP4 Sintel OK.
+- APK store: `iMirror-v1.8.2-amazon-armeabi-v7a.apk` (versionCode 11, permessi invariati).
