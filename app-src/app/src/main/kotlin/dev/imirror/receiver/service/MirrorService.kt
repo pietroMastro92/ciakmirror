@@ -203,9 +203,13 @@ class MirrorService : Service() {
 
         // Personal-use FairPlay SAP bridge (sideload only; no-op in the Amazon build).
         // It captures the encrypted /play URL from the local helper and plays it with ExoPlayer.
-        FairPlaySupport.start(applicationContext) { url ->
-            airPlayReceiver?.playExternalVideo(url)
-        }
+        FairPlaySupport.start(
+            applicationContext,
+            onUrl = { url, position -> airPlayReceiver?.playExternalVideo(url, position) },
+            onScrub = { position -> airPlayReceiver?.scrubExternalVideo(position) },
+            onRate = { rate -> airPlayReceiver?.setExternalVideoRate(rate) },
+            onStop = { airPlayReceiver?.stopExternalVideo() }
+        )
     }
 
     /**

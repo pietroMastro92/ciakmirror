@@ -18,29 +18,46 @@ import java.net.NetworkInterface.getNetworkInterfaces
  * public/Amazon builds use the no-op variant in src/amazon.
  *
  * The helper advertises "iMirror Video" on port 7001, receives the iOS 27 encrypted
- * /play session, prints the media URL, and the app plays that URL with ExoPlayer.
+ * /play session, prints the media URL + playback controls, and the app mirrors those
+ * controls onto ExoPlayer.
  */
 object FairPlaySupport {
 
     private const val ASSET = "fairplaysap-arm"
+    private const val HELPER_VERSION = "2"   // bump when the helper binary changes
     private const val HELPER_PORT = 7001
     private const val HELPER_NAME = "iMirror Video"
+
     private val URL_REGEX = Regex("\"url\"\\s*:\\s*\"([^\"]+)\"")
+    private val POSITION_REGEX = Regex("\"position\"\\s*:\\s*([0-9.]+)")
+    private val SCRUB_REGEX = Regex("\"control\"\\s*:\\s*\"scrub\".*?\"position\"\\s*:\\s*([0-9.]+)")
+    private val RATE_REGEX = Regex("\"control\"\\s*:\\s*\"rate\".*?\"value\"\\s*:\\s*([0-9.]+)")
+    private val STOP_REGEX = Regex("\"control\"\\s*:\\s*\"stop\"")
 
     private var process: Process? = null
     private var reader: Thread? = null
 
     @Volatile private var running = false
 
-    fun start(context: Context, onUrl: (String) -> Unit) {
+    fun start(
+        context: Context,
+        onUrl: (url: String, startPositionSec: Double) -> Unit,
+        onScrub: (positionSec: Double) -> Unit,
+        onRate: (rate: Float) -> Unit,
+        onStop: () -> Unit,
+    ) {
         if (process != null) return
         val app = context.applicationContext
         val binary = File(app.filesDir, ASSET)
-        if (!binary.exists() || binary.length() < 1_000_000L) {
+        val marker = File(app.filesDir, "fairplaysap.version")
+        val needsCopy = !binary.exists() || binary.length() < 1_000_000L ||
+            runCatching { marker.readText().trim() }.getOrNull() != HELPER_VERSION
+        if (needsCopy) {
             val copied = runCatching {
                 app.assets.open(ASSET).use { input ->
                     binary.outputStream().use { output -> input.copyTo(output) }
                 }
+                marker.writeText(HELPER_VERSION)
             }
             if (copied.isFailure) {
                 Logger.e("FairPlay helper: asset not available (public build?)", copied.exceptionOrNull())
@@ -77,8 +94,23 @@ object FairPlaySupport {
                 proc.inputStream.bufferedReader().useLines { lines ->
                     lines.forEach { line ->
                         if (!running) return@forEach
-                        val match = URL_REGEX.find(line) ?: return@forEach
-                        val url = match.groupValues[1]
+
+                        SCRUB_REGEX.find(line)?.let { match ->
+                            match.groupValues.getOrNull(1)?.toDoubleOrNull()?.let(onScrub)
+                            return@forEach
+                        }
+                        RATE_REGEX.find(line)?.let { match ->
+                            match.groupValues.getOrNull(1)?.toFloatOrNull()?.let(onRate)
+                            return@forEach
+                        }
+                        if (STOP_REGEX.containsMatchIn(line)) {
+                            onStop()
+                            return@forEach
+                        }
+                        val urlMatch = URL_REGEX.find(line) ?: return@forEach
+                        val url = urlMatch.groupValues[1]
+                        val startSec = POSITION_REGEX.find(line)
+                            ?.groupValues?.getOrNull(1)?.toDoubleOrNull() ?: 0.0
                         Logger.i("FairPlay helper captured media URL")
                         runCatching {
                             app.startActivity(
@@ -86,7 +118,7 @@ object FairPlaySupport {
                                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             )
                         }
-                        onUrl(url)
+                        onUrl(url, startSec)
                     }
                 }
             }.onFailure { if (running) Logger.e("FairPlay helper reader error", it) }

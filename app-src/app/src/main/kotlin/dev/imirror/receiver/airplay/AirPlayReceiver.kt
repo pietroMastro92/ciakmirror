@@ -536,8 +536,24 @@ class AirPlayReceiver(
      * Personal FairPlay bridge: plays a media URL captured from the encrypted SAP session
      * by the local go-atv helper (sideload flavor only).
      */
-    fun playExternalVideo(url: String) {
+    fun playExternalVideo(url: String, startPositionSec: Double = 0.0) {
         startUrlVideo(url, 0.0)
+        if (startPositionSec > 0.0) urlVideoPlayer?.scrub(startPositionSec)
+    }
+
+    /** Forwards a seek from the encrypted SAP player to the URL player. */
+    fun scrubExternalVideo(positionSec: Double) {
+        urlVideoPlayer?.scrub(positionSec)
+    }
+
+    /** Forwards pause/resume from the encrypted SAP player to the URL player. */
+    fun setExternalVideoRate(rate: Float) {
+        urlVideoPlayer?.setRate(rate)
+    }
+
+    /** Stops URL playback when the sender ends the encrypted SAP session. */
+    fun stopExternalVideo() {
+        stopUrlVideo()
     }
 
     /**
