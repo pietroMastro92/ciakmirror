@@ -68,8 +68,8 @@ object InfoResponder {
         return PlistCodec.encode(info)
     }
 
-    /** 64-bit features value; mirrors MdnsService's "0x5A7FFFF7,0x1E" (low,high 32-bit halves). */
-    private const val AIRPLAY_FEATURES = 0x1E5A7FFFF7L
+    /** 64-bit features value; mirrors MdnsService's "0x5A7FFFF3,0x1E" (low,high 32-bit halves). */
+    private const val AIRPLAY_FEATURES = 0x1E5A7FFFF3L
 
     /** Matches RPiPlay's /info statusFlags (0x44). */
     private const val STATUS_FLAGS = 68L

@@ -15,6 +15,7 @@ import dev.imirror.receiver.MainActivity
 import dev.imirror.receiver.R
 import android.view.Surface
 import dev.imirror.receiver.airplay.AirPlayReceiver
+import dev.imirror.receiver.fairplay.FairPlaySupport
 import dev.imirror.receiver.history.SessionHistoryRepository
 import dev.imirror.receiver.history.SessionKind
 import dev.imirror.receiver.history.SessionOutcome
@@ -199,6 +200,12 @@ class MirrorService : Service() {
         updateNotification(isRunning = true)
 
         if (settings.airPlayEnabled) startAirPlay(settings)
+
+        // Personal-use FairPlay SAP bridge (sideload only; no-op in the Amazon build).
+        // It captures the encrypted /play URL from the local helper and plays it with ExoPlayer.
+        FairPlaySupport.start(applicationContext) { url ->
+            airPlayReceiver?.playExternalVideo(url)
+        }
     }
 
     /**
@@ -332,6 +339,7 @@ class MirrorService : Service() {
     }
 
     private fun stopAllReceiversInternal() {
+        FairPlaySupport.stop()
         try { airPlayReceiver?.stop() } catch (e: Exception) { Logger.e("AirPlay stop error", e) }
         airPlayReceiver = null
         _airPlayState.value = ProtocolState.DISABLED

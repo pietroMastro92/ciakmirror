@@ -533,6 +533,14 @@ class AirPlayReceiver(
     }
 
     /**
+     * Personal FairPlay bridge: plays a media URL captured from the encrypted SAP session
+     * by the local go-atv helper (sideload flavor only).
+     */
+    fun playExternalVideo(url: String) {
+        startUrlVideo(url, 0.0)
+    }
+
+    /**
      * Re-attach the video Surface to the URL-video player.
      * Called by the Activity when StreamingScreen's SurfaceView creates its Surface, which may
      * happen *after* ExoPlayer's `prepare()` (e.g. app brought to foreground by the stream).

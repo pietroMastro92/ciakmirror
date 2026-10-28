@@ -225,7 +225,7 @@ class MdnsService(
 
             setAttribute("cn", "0,1,2,3")        // Cipher numbers (encryption types)
             setAttribute("da", "true")             // Digest authentication capable
-            setAttribute("et", "0,3,5")            // Encryption types supported
+            setAttribute("et", "0,3")              // No SAPv2.5: we don't implement it (forces plain /play)
             setAttribute("md", "0,1,2")            // Metadata types supported
             setAttribute("sv", "false")            // Software volume control
             setAttribute("tp", "UDP")              // Transport for audio RTP
@@ -325,7 +325,7 @@ class MdnsService(
          * AirPlay feature bitmask: advertise screen mirroring, video, and audio support.
          * See TECHNICAL_SPEC.md §8 for the full bit-level breakdown.
          */
-        private const val AIRPLAY_FEATURES = "0x5A7FFFF7,0x1E"
+        private const val AIRPLAY_FEATURES = "0x5A7FFFF3,0x1E"
 
         /** Pretend to be an Apple TV so macOS uses the screen mirroring protocol. */
         private const val AIRPLAY_MODEL = "AppleTV5,3"

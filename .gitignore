@@ -13,3 +13,5 @@ app/release/
 *.jks
 keystore/
 keystore.properties
+
+app-src/app/src/sideload/assets/
