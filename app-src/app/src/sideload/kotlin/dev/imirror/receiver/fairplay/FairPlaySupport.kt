@@ -2,6 +2,9 @@ package dev.imirror.receiver.fairplay
 
 import android.content.Context
 import android.content.Intent
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
+import android.util.Log
 import dev.imirror.receiver.MainActivity
 import dev.imirror.receiver.util.Logger
 import java.io.File
@@ -24,7 +27,7 @@ import java.net.NetworkInterface.getNetworkInterfaces
 object FairPlaySupport {
 
     private const val ASSET = "fairplaysap-arm"
-    private const val HELPER_VERSION = "2"   // bump when the helper binary changes
+    private const val HELPER_VERSION = "4"   // bump when the helper binary changes
     private const val HELPER_PORT = 7001
     private const val HELPER_NAME = "iMirror Video"
 
@@ -33,9 +36,12 @@ object FairPlaySupport {
     private val SCRUB_REGEX = Regex("\"control\"\\s*:\\s*\"scrub\".*?\"position\"\\s*:\\s*([0-9.]+)")
     private val RATE_REGEX = Regex("\"control\"\\s*:\\s*\"rate\".*?\"value\"\\s*:\\s*([0-9.]+)")
     private val STOP_REGEX = Regex("\"control\"\\s*:\\s*\"stop\"")
+    private val TXT_REGEX = Regex("\"([A-Za-z0-9]+)=([^\"]*)\"")
 
     private var process: Process? = null
     private var reader: Thread? = null
+    private var nsdManager: NsdManager? = null
+    private var nsdListener: NsdManager.RegistrationListener? = null
 
     @Volatile private var running = false
 
@@ -68,15 +74,10 @@ object FairPlaySupport {
         binary.setExecutable(true, false)
 
         val ip = localIpv4()
-        if (ip == null) {
-            Logger.e("FairPlay helper: no IPv4 address")
-            return
-        }
         val command = listOf(
             binary.absolutePath,
             "-fairplay",
             "-listen", "0.0.0.0:$HELPER_PORT",
-            "-mdns-ip", ip,
             "-name", HELPER_NAME,
             "-duration", "24h"
         )
@@ -95,15 +96,47 @@ object FairPlaySupport {
                     lines.forEach { line ->
                         if (!running) return@forEach
 
+                        if (line.contains("\"address\"") || line.contains("\"txt\"")) {
+                            Log.i("iMirrorFP", "helper startup: $line")
+                        }
+
+                        // The helper prints its TXT record once at startup. Advertise the service
+                        // through the app's NsdManager: the Go mDNS responder expires after a while
+                        // and "iMirror Video" disappears from the AirPlay picker.
+                        if (nsdListener == null && line.contains("\"txt\"")) {
+                            val txt = TXT_REGEX.findAll(line)
+                                .associate { it.groupValues[1] to it.groupValues[2] }
+                            if (txt["pk"] != null && txt["pi"] != null) {
+                                registerMdns(app, txt)
+                            }
+                        }
+
+                        if (line.contains("\"control\"") ||
+                            line.contains("\"path\":\"/rate\"") ||
+                            line.contains("\"path\":\"/scrub\"") ||
+                            line.contains("\"path\":\"/stop\"") ||
+                            line.contains("\"path\":\"/play\"") ||
+                            (line.contains("\"encrypted\":true") && !line.contains("\"/playback-info\""))
+                        ) {
+                            android.util.Log.i("iMirrorFP", line)
+                        }
+
                         SCRUB_REGEX.find(line)?.let { match ->
-                            match.groupValues.getOrNull(1)?.toDoubleOrNull()?.let(onScrub)
+                            match.groupValues.getOrNull(1)?.toDoubleOrNull()?.let {
+                                android.util.Log.i("iMirrorFP", "onScrub $it")
+                                onScrub(it)
+                            }
                             return@forEach
                         }
                         RATE_REGEX.find(line)?.let { match ->
-                            match.groupValues.getOrNull(1)?.toFloatOrNull()?.let(onRate)
+                            match.groupValues.getOrNull(1)?.toFloatOrNull()?.let {
+                                android.util.Log.i("iMirrorFP", "onRate $it")
+                                onRate(it)
+                            }
                             return@forEach
                         }
                         if (STOP_REGEX.containsMatchIn(line)) {
+                            android.util.Log.i("iMirrorFP", "onStop")
                             onStop()
                             return@forEach
                         }
@@ -129,9 +162,38 @@ object FairPlaySupport {
         running = false
         reader?.interrupt()
         reader = null
+        nsdListener?.let { listener -> runCatching { nsdManager?.unregisterService(listener) } }
+        nsdListener = null
+        nsdManager = null
         process?.destroy()
         process = null
         Logger.i("FairPlay helper stopped")
+    }
+
+    /** Registers "iMirror Video" via Android's mDNS (stable, unlike the Go helper's responder). */
+    private fun registerMdns(context: Context, txt: Map<String, String>) {
+        runCatching {
+            val nsd = context.getSystemService(Context.NSD_SERVICE) as NsdManager
+            val info = NsdServiceInfo().apply {
+                serviceName = HELPER_NAME
+                serviceType = "_airplay._tcp"
+                port = HELPER_PORT
+                txt.forEach { (key, value) -> setAttribute(key, value) }
+            }
+            val listener = object : NsdManager.RegistrationListener {
+                override fun onServiceRegistered(info: NsdServiceInfo) {
+                    Log.i("iMirrorFP", "mDNS registered: ${info.serviceName}:$HELPER_PORT")
+                }
+                override fun onRegistrationFailed(info: NsdServiceInfo, errorCode: Int) {
+                    Log.e("iMirrorFP", "mDNS registration failed: $errorCode")
+                }
+                override fun onServiceUnregistered(info: NsdServiceInfo) {}
+                override fun onUnregistrationFailed(info: NsdServiceInfo, errorCode: Int) {}
+            }
+            nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener)
+            nsdManager = nsd
+            nsdListener = listener
+        }.onFailure { Log.e("iMirrorFP", "mDNS register error", it) }
     }
 
     /** First non-loopback IPv4 address (Wi-Fi/Ethernet). */

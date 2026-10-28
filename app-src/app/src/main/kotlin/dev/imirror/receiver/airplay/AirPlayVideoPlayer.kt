@@ -57,6 +57,8 @@ class AirPlayVideoPlayer(
     @Volatile private var durationMs = 0L
     @Volatile private var positionMs = 0L
     @Volatile private var playing = false
+    /** True after a sender pause; prevents a late prepare from resuming playback. */
+    @Volatile private var pausedBySender = false
 
     private val progressTicker = object : Runnable {
         override fun run() {
@@ -103,6 +105,11 @@ class AirPlayVideoPlayer(
                     Player.STATE_READY -> {
                         prepared = true
                         durationMs = exo.duration.coerceAtLeast(0L)
+                        exo.playWhenReady = !pausedBySender
+                        android.util.Log.i(
+                            "iMirrorFP",
+                            "player READY pausedBySender=$pausedBySender playWhenReady=${exo.playWhenReady}"
+                        )
                         // Start-Position is a fraction of the total duration; apply it once.
                         if (!initialSeekApplied && startFraction > 0.0 && durationMs > 0) {
                             exo.seekTo((startFraction * durationMs).toLong())
@@ -135,7 +142,7 @@ class AirPlayVideoPlayer(
         exo.setMediaSource(buildMediaSource(url, dataSourceFactory))
         surfaceProvider()?.let { exo.setVideoSurface(it) }
         exo.prepare()
-        exo.playWhenReady = true
+        exo.playWhenReady = !pausedBySender
         mainHandler.post(progressTicker)
     }
 
@@ -154,7 +161,14 @@ class AirPlayVideoPlayer(
 
     /** rate ≤ 0 pauses, > 0 resumes. */
     fun setRate(rate: Float) {
-        mainHandler.post { player?.playWhenReady = rate > 0f }
+        mainHandler.post {
+            pausedBySender = rate <= 0f
+            android.util.Log.i(
+                "iMirrorFP",
+                "player setRate=$rate pausedBySender=$pausedBySender"
+            )
+            player?.playWhenReady = rate > 0f
+        }
     }
 
     /** Seeks to [positionSec] seconds. */

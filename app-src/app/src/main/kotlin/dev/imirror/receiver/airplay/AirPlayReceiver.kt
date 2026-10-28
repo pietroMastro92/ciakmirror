@@ -120,6 +120,8 @@ class AirPlayReceiver(
     @Volatile private var audioServer: AudioStreamServer? = null
     @Volatile private var bufferedAudioServer: BufferedAudioServer? = null
     @Volatile private var urlVideoPlayer: AirPlayVideoPlayer? = null
+    /** URL currently owned by the external FairPlay bridge (dedupe repeated helper lines). */
+    private var currentExternalUrl: String? = null
 
     // Reverse remote control (TV → sender). Created lazily once a sender advertises DACP-ID.
     private val dacpClient = DacpClient(context)
@@ -525,6 +527,7 @@ class AirPlayReceiver(
 
     /** Stops AirPlay video URL playback (POST /stop or end-of-media) and ends the session. */
     private fun stopUrlVideo() {
+        currentExternalUrl = null
         urlVideoPlayer?.release()
         urlVideoPlayer = null
         onStreamingStopped()
@@ -537,17 +540,34 @@ class AirPlayReceiver(
      * by the local go-atv helper (sideload flavor only).
      */
     fun playExternalVideo(url: String, startPositionSec: Double = 0.0) {
+        // The helper prints the state/URL repeatedly; never recreate the player for the same
+        // media URL, or pause/seek state is lost mid-session.
+        if (url == currentExternalUrl && urlVideoPlayer != null) {
+            android.util.Log.i("iMirrorFP", "same URL — keeping current player")
+            return
+        }
+        currentExternalUrl = url
         startUrlVideo(url, 0.0)
-        if (startPositionSec > 0.0) urlVideoPlayer?.scrub(startPositionSec)
+        if (startPositionSec > 0.0) {
+            val dur = urlVideoPlayer?.info()?.durationSec ?: 0.0
+            val target = if (dur > 2.0 && startPositionSec >= dur - 0.5) dur - 1.0 else startPositionSec
+            urlVideoPlayer?.scrub(target)
+        }
     }
 
     /** Forwards a seek from the encrypted SAP player to the URL player. */
     fun scrubExternalVideo(positionSec: Double) {
-        urlVideoPlayer?.scrub(positionSec)
+        android.util.Log.i("iMirrorFP", "apply scrub $positionSec")
+        val player = urlVideoPlayer ?: return
+        val dur = player.info()?.durationSec ?: 0.0
+        // Seeking exactly to the end makes ExoPlayer emit ENDED and closes the overlay.
+        val target = if (dur > 2.0 && positionSec >= dur - 0.5) dur - 1.0 else positionSec
+        player.scrub(target)
     }
 
     /** Forwards pause/resume from the encrypted SAP player to the URL player. */
     fun setExternalVideoRate(rate: Float) {
+        android.util.Log.i("iMirrorFP", "apply rate $rate")
         urlVideoPlayer?.setRate(rate)
     }
 
