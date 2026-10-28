@@ -79,7 +79,7 @@ object FairPlaySupport {
             "-fairplay",
             "-listen", "0.0.0.0:$HELPER_PORT",
             "-name", HELPER_NAME,
-            "-duration", "24h"
+            "-duration", "1800s"
         )
         val proc = runCatching { ProcessBuilder(command).redirectErrorStream(true).start() }
             .getOrElse {

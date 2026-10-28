@@ -122,6 +122,8 @@ class AirPlayReceiver(
     @Volatile private var urlVideoPlayer: AirPlayVideoPlayer? = null
     /** URL currently owned by the external FairPlay bridge (dedupe repeated helper lines). */
     private var currentExternalUrl: String? = null
+    /** True while the FairPlay bridge owns playback: ENDED must not close the overlay. */
+    @Volatile private var externalMode = false
 
     // Reverse remote control (TV → sender). Created lazily once a sender advertises DACP-ID.
     private val dacpClient = DacpClient(context)
@@ -518,7 +520,13 @@ class AirPlayReceiver(
         val player = urlVideoPlayer ?: AirPlayVideoPlayer(
             context = context,
             surfaceProvider = videoSurfaceProvider,
-            onEnded = { stopUrlVideo() },
+            onEnded = {
+                    if (externalMode) {
+                        android.util.Log.i("iMirrorFP", "external video ended — overlay kept")
+                    } else {
+                        stopUrlVideo()
+                    }
+                },
             onError = { onVideoError() }
         ).also { urlVideoPlayer = it }
         player.play(url, startFraction)
@@ -528,6 +536,7 @@ class AirPlayReceiver(
     /** Stops AirPlay video URL playback (POST /stop or end-of-media) and ends the session. */
     private fun stopUrlVideo() {
         currentExternalUrl = null
+        externalMode = false
         urlVideoPlayer?.release()
         urlVideoPlayer = null
         onStreamingStopped()
@@ -547,10 +556,11 @@ class AirPlayReceiver(
             return
         }
         currentExternalUrl = url
+        externalMode = true
         startUrlVideo(url, 0.0)
         if (startPositionSec > 0.0) {
             val dur = urlVideoPlayer?.info()?.durationSec ?: 0.0
-            val target = if (dur > 2.0 && startPositionSec >= dur - 0.5) dur - 1.0 else startPositionSec
+            val target = if (dur > 4.0 && startPositionSec >= dur - 2.0) dur - 2.0 else startPositionSec
             urlVideoPlayer?.scrub(target)
         }
     }
@@ -561,8 +571,10 @@ class AirPlayReceiver(
         val player = urlVideoPlayer ?: return
         val dur = player.info()?.durationSec ?: 0.0
         // Seeking exactly to the end makes ExoPlayer emit ENDED and closes the overlay.
-        val target = if (dur > 2.0 && positionSec >= dur - 0.5) dur - 1.0 else positionSec
+        val target = if (dur > 4.0 && positionSec >= dur - 2.0) dur - 2.0 else positionSec
         player.scrub(target)
+        // A seek after ENDED must resume playback.
+        player.setRate(1f)
     }
 
     /** Forwards pause/resume from the encrypted SAP player to the URL player. */
@@ -573,6 +585,7 @@ class AirPlayReceiver(
 
     /** Stops URL playback when the sender ends the encrypted SAP session. */
     fun stopExternalVideo() {
+        externalMode = false
         stopUrlVideo()
     }
 
