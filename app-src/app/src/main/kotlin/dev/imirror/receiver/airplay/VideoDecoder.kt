@@ -86,6 +86,10 @@ class VideoDecoder(private val outputSurface: Surface) {
 
         Logger.i("Initializing H.264 decoder: ${actualWidth}x${actualHeight} " +
                  "(hint was ${width}x${height})")
+        dev.imirror.receiver.util.Diagnostics.log(
+            "DECODER",
+            "init ${actualWidth}x${actualHeight} (hint ${width}x${height})"
+        )
 
         // Provisional size for StreamingScreen aspect-fit; replaced by the decoder's reported size.
         StreamStats.videoWidth = actualWidth
@@ -143,6 +147,7 @@ class VideoDecoder(private val outputSurface: Surface) {
 
         isInitialized = true
         Logger.i("H.264 decoder initialized successfully")
+        dev.imirror.receiver.util.Diagnostics.log("DECODER", "initialized OK")
     }
 
     /**

@@ -15,6 +15,10 @@ import dev.imirror.receiver.MainActivity
 import dev.imirror.receiver.R
 import android.view.Surface
 import dev.imirror.receiver.airplay.AirPlayReceiver
+import dev.imirror.receiver.history.SessionHistoryRepository
+import dev.imirror.receiver.history.SessionKind
+import dev.imirror.receiver.history.SessionOutcome
+import dev.imirror.receiver.history.SessionRecord
 import dev.imirror.receiver.settings.AppSettings
 import dev.imirror.receiver.settings.SettingsRepository
 import dev.imirror.receiver.util.Logger
@@ -22,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,6 +81,17 @@ class MirrorService : Service() {
     // Non-null while a PIN should be shown on screen for SRP pair-setup (PIN access control).
     private val _pairingPin = MutableStateFlow<String?>(null)
     val pairingPin: StateFlow<String?> = _pairingPin.asStateFlow()
+
+    // ─── Session history (last 20, local only) ───────────────────────────────
+    private val historyRepo by lazy { SessionHistoryRepository(applicationContext) }
+    val sessionHistoryFlow: Flow<List<SessionRecord>> get() = historyRepo.history
+
+    private var sessionStartMs: Long? = null
+    private var sessionDevice: String = "AirPlay"
+    private var sessionKind: SessionKind = SessionKind.MIRRORING
+    private var sessionErrored: Boolean = false
+    /** Kind inferred before CONNECTED fires (video/audio start before the state change). */
+    private var nextSessionKind: SessionKind? = null
 
     // Surface provider — supplied by MainActivity after binding (Sprint 5).
     // The lambda captures this field so it always uses the latest provider even if
@@ -266,8 +282,19 @@ class MirrorService : Service() {
             },
             onNowPlayingChanged = { info ->
                 _nowPlaying.value = info
+                if (info != null) {
+                    if (sessionStartMs == null) nextSessionKind = SessionKind.AUDIO
+                    else if (sessionKind != SessionKind.VIDEO) sessionKind = SessionKind.AUDIO
+                }
+            },
+            onVideoModeChanged = { isVideo ->
+                if (isVideo) {
+                    if (sessionStartMs == null) nextSessionKind = SessionKind.VIDEO
+                    else sessionKind = SessionKind.VIDEO
+                }
             },
             onVideoError = {
+                sessionErrored = true
                 // Black screen no more: tell the user why the URL video didn't start.
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
                     android.widget.Toast.makeText(
@@ -284,6 +311,7 @@ class MirrorService : Service() {
                 _airPlayState.value = state
                 when (state) {
                     ProtocolState.CONNECTED   -> {
+                        beginSession(pendingSenderName)
                         _photoFrame.value = null
                         _activeConnection.value =
                             ActiveConnection(pendingSenderName, Protocol.AIRPLAY)
@@ -292,6 +320,7 @@ class MirrorService : Service() {
                     ProtocolState.ADVERTISING,
                     ProtocolState.DISABLED,
                     ProtocolState.ERROR       -> {
+                        endSession(error = state == ProtocolState.ERROR)
                         _activeConnection.value = null
                         updateNotification(isRunning = state != ProtocolState.DISABLED &&
                                                        state != ProtocolState.ERROR)
@@ -309,6 +338,44 @@ class MirrorService : Service() {
         _photoFrame.value = null
         _nowPlaying.value = null
         _pairingPin.value = null
+        sessionStartMs = null
+        nextSessionKind = null
+    }
+
+    // ─── Session history ─────────────────────────────────────────────────────
+
+    private fun beginSession(deviceName: String) {
+        if (sessionStartMs != null) return
+        sessionStartMs = System.currentTimeMillis()
+        sessionDevice = deviceName.ifBlank { "AirPlay" }
+        sessionKind = nextSessionKind ?: SessionKind.MIRRORING
+        nextSessionKind = null
+        sessionErrored = false
+    }
+
+    private fun endSession(error: Boolean) {
+        val started = sessionStartMs ?: return
+        sessionStartMs = null
+        val duration = (System.currentTimeMillis() - started).coerceAtLeast(0L)
+        // Ignore probes/aborted handshakes shorter than 1.5 s.
+        if (duration < 1_500L) return
+        val kind = if (sessionKind == SessionKind.VIDEO) SessionKind.VIDEO
+                   else if (_nowPlaying.value != null) SessionKind.AUDIO
+                   else sessionKind
+        val record = SessionRecord(
+            id = started,
+            deviceName = sessionDevice,
+            kind = kind,
+            startedAt = started,
+            durationMs = duration,
+            outcome = if (error || sessionErrored) SessionOutcome.ERROR else SessionOutcome.COMPLETED
+        )
+        serviceScope.launch { historyRepo.add(record) }
+    }
+
+    /** Clears the local session history (Home → "Vedi tutte" → "Cancella cronologia"). */
+    fun clearSessionHistory() {
+        serviceScope.launch { historyRepo.clear() }
     }
 
     // ─── Notification ────────────────────────────────────────────────────────

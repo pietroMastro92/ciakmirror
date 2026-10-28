@@ -16,6 +16,9 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import dev.imirror.receiver.R
+import dev.imirror.receiver.history.SessionKind
+import dev.imirror.receiver.history.SessionOutcome
+import dev.imirror.receiver.history.SessionRecord
 import dev.imirror.receiver.service.MirrorService
 import dev.imirror.receiver.service.Protocol
 import dev.imirror.receiver.service.ProtocolState
@@ -67,6 +70,8 @@ class HomeFragment : Fragment() {
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
     private lateinit var btnRestart: Button
+    private lateinit var historyContainer: LinearLayout
+    private lateinit var btnHistoryAll: Button
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_home, container, false)
@@ -104,6 +109,8 @@ class HomeFragment : Fragment() {
         btnStart         = view.findViewById(R.id.btn_start)
         btnStop          = view.findViewById(R.id.btn_stop)
         btnRestart       = view.findViewById(R.id.btn_restart)
+        historyContainer = view.findViewById(R.id.history_container)
+        btnHistoryAll    = view.findViewById(R.id.btn_history_all)
     }
 
     /**
@@ -163,6 +170,95 @@ class HomeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             svc.airPlayState.collectLatest { state -> updateProtocolCard(cardAirPlay, state) }
         }
+        viewLifecycleOwner.lifecycleScope.launch {
+            svc.sessionHistoryFlow.collectLatest { records -> renderHistory(records) }
+        }
+    }
+
+    // ─── Session history ─────────────────────────────────────────────────────
+
+    private fun renderHistory(records: List<SessionRecord>) {
+        val ctx = requireContext()
+        historyContainer.removeAllViews()
+        val recent = records.take(3)
+
+        if (recent.isEmpty()) {
+            historyContainer.addView(TextView(ctx).apply {
+                text = getString(R.string.history_empty)
+                setTextColor(0x99FFFFFF.toInt())
+                textSize = 16f
+                setPadding(0, 4, 0, 4)
+            })
+            btnHistoryAll.visibility = View.GONE
+            return
+        }
+
+        recent.forEach { record ->
+            historyContainer.addView(TextView(ctx).apply {
+                text = historyLine(record)
+                setTextColor(0xE6FFFFFF.toInt())
+                textSize = 16f
+                setPadding(0, 6, 0, 6)
+            })
+        }
+        btnHistoryAll.visibility = if (records.size > 3) View.VISIBLE else View.GONE
+        btnHistoryAll.setOnClickListener { showHistoryDialog(records) }
+    }
+
+    private fun historyLine(record: SessionRecord): String {
+        val pattern = if (isToday(record.startedAt)) "HH:mm" else "dd/MM HH:mm"
+        val time = java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault())
+            .format(java.util.Date(record.startedAt))
+        val duration = if (record.durationMs >= 60_000) {
+            getString(R.string.history_minutes, record.durationMs / 60_000)
+        } else {
+            getString(R.string.history_seconds, record.durationMs / 1_000)
+        }
+        val kindRes = when (record.kind) {
+            SessionKind.MIRRORING -> R.string.history_kind_mirroring
+            SessionKind.VIDEO     -> R.string.history_kind_video
+            SessionKind.AUDIO     -> R.string.history_kind_audio
+        }
+        val line = getString(
+            R.string.history_item,
+            record.deviceName,
+            time,
+            getString(kindRes),
+            duration
+        )
+        return if (record.outcome == SessionOutcome.ERROR) {
+            line + " · " + getString(R.string.history_outcome_error)
+        } else line
+    }
+
+    private fun isToday(timestamp: Long): Boolean {
+        val now = java.util.Calendar.getInstance()
+        val then = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
+        return now.get(java.util.Calendar.YEAR) == then.get(java.util.Calendar.YEAR) &&
+            now.get(java.util.Calendar.DAY_OF_YEAR) == then.get(java.util.Calendar.DAY_OF_YEAR)
+    }
+
+    private fun showHistoryDialog(records: List<SessionRecord>) {
+        val ctx = requireContext()
+        val list = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 16, 48, 16)
+        }
+        records.forEach { record ->
+            list.addView(TextView(ctx).apply {
+                text = historyLine(record)
+                setTextColor(0xFFFFFFFF.toInt())
+                textSize = 15f
+                setPadding(0, 10, 0, 10)
+            })
+        }
+        val scroll = android.widget.ScrollView(ctx).apply { addView(list) }
+        androidx.appcompat.app.AlertDialog.Builder(ctx)
+            .setTitle(R.string.history_title)
+            .setView(scroll)
+            .setPositiveButton(R.string.history_close, null)
+            .setNeutralButton(R.string.history_clear) { _, _ -> service?.clearSessionHistory() }
+            .show()
     }
 
     /**

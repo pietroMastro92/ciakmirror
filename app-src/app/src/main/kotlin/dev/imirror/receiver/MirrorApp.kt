@@ -20,6 +20,7 @@ class MirrorApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        dev.imirror.receiver.util.Diagnostics.init(this)
         initLogging()
     }
 

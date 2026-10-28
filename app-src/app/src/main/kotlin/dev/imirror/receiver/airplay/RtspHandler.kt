@@ -103,6 +103,9 @@ open class RtspHandler(
 
     private var currentCSeq: Int = 0
 
+    /** All live RTSP control connections (control/feedback + /play can coexist). */
+    private val activeClients = java.util.concurrent.CopyOnWriteArrayList<Socket>()
+
     @Volatile
     private var currentSession: SessionDescription? = null
 
@@ -153,12 +156,12 @@ open class RtspHandler(
     fun stop() {
         running = false
         try {
-            activeClient?.close()
+            activeClients.forEach { runCatching { it.close() } }
+            activeClients.clear()
             serverSocket?.close()
         } catch (e: Exception) {
             Logger.e("Error closing RTSP sockets (non-fatal)", e)
         }
-        activeClient = null
         serverSocket = null
         Logger.i("RTSP handler stopped")
     }
@@ -197,15 +200,17 @@ open class RtspHandler(
                 val clientSocket = serverSocket!!.accept()
                 Logger.i("New client connected: ${clientSocket.inetAddress.hostAddress}")
 
-                if (activeClient != null && !activeClient!!.isClosed) {
-                    Logger.w("Rejecting second client — already streaming")
-                    sendServiceUnavailable(clientSocket)
-                    clientSocket.close()
-                    continue
+                // Concurrent clients are REQUIRED: AirPlay video senders keep the control/feedback
+                // connection open while POSTing /play (the media URL) on a SECOND connection.
+                // Handling clients sequentially made /play wait forever behind the control socket.
+                activeClients.add(clientSocket)
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        handleClient(clientSocket)
+                    } finally {
+                        activeClients.remove(clientSocket)
+                    }
                 }
-
-                activeClient = clientSocket
-                handleClient(clientSocket)
             }
         } catch (e: Exception) {
             if (running) {
@@ -220,6 +225,10 @@ open class RtspHandler(
         val inputStream = socket.getInputStream()
         val outputStream = socket.getOutputStream()
 
+        debugLog("CONNECT from ${socket.inetAddress?.hostAddress}")
+        requestReader.onDiagnostic = { msg -> debugLog(msg) }
+        var ownsSession = false
+
         // Fresh pairing + FairPlay state for each control connection.
         pairingSession = PairingSession(PairingKeys.get(context))
         fairPlay = FairPlay()
@@ -232,9 +241,12 @@ open class RtspHandler(
         try {
             while (running && !socket.isClosed) {
                 val request = requestReader.read(inputStream) ?: break
-                currentCSeq = request.headers["CSeq"]?.toIntOrNull() ?: 0
+                val cseq = request.headers["CSeq"]?.toIntOrNull() ?: 0
+                if (request.method == "SETUP" || request.method == "ANNOUNCE" || request.method == "RECORD") {
+                    ownsSession = true
+                }
                 val response = routeRequest(request)
-                sendResponse(outputStream, response)
+                sendResponse(outputStream, response, cseq)
 
                 // After RECORD on a legacy SDP session: a session WITH video switches to interleaved
                 // RTP (video arrives $-framed over this TCP socket). An audio-only session (e.g. Apple
@@ -264,25 +276,31 @@ open class RtspHandler(
             if (running) Logger.e("Error handling RTSP client", e)
         } finally {
             Logger.i("Client disconnected")
+            debugLog("DISCONNECT")
             socket.close()
-            activeClient = null
-            currentSession = null
-            pairingSession = null
-            fairPlay = null
-            isMirrorSession = false
-            activeStreamTypes.clear()
-            setupCount = 0
-            if (isUrlVideoActive()) {
-                // URL video fetches the media itself and is driven by separate requests
-                // (/playback-info, /rate, /stop). A control-socket close is NOT a stop.
-                Logger.i("Control connection closed — URL video keeps playing")
-            } else {
-                onStreamingStopped()
+            if (ownsSession) {
+                currentSession = null
+                pairingSession = null
+                fairPlay = null
+                isMirrorSession = false
+                activeStreamTypes.clear()
+                setupCount = 0
+                if (isUrlVideoActive()) {
+                    // URL video fetches the media itself and is driven by separate requests
+                    // (/playback-info, /rate, /stop). A control-socket close is NOT a stop.
+                    Logger.i("Control connection closed — URL video keeps playing")
+                } else {
+                    onStreamingStopped()
+                }
             }
         }
     }
 
     private fun routeRequest(request: RtspRequest): RtspResponse {
+        debugLog(
+            "REQ ${request.method} ${request.uri} len=${request.bodyBytes.size} " +
+                "ct=${request.headers["Content-Type"] ?: "-"}"
+        )
         Logger.d("RTSP ${request.method} ${request.uri}")
         // Senders attach their DACP reverse-control identity to most requests — capture it so the TV
         // remote can drive playback (DacpClient dedups, so this is cheap to call repeatedly).
@@ -303,7 +321,10 @@ open class RtspHandler(
             "SETRATEANCHORTIME", "SETRATEANCHORTIM" -> handleBufferedControl(request, "SETRATEANCHORTIME")
             "SETPEERS", "SETPEERSX"                 -> handleBufferedControl(request, "SETPEERS")
             "FLUSHBUFFERED"                         -> handleBufferedControl(request, "FLUSHBUFFERED")
-            "PUT"           -> handlePhotoPutInternal(request)
+            "PUT"           -> if (request.uri.substringBefore("?").startsWith("/setProperty"))
+                                   handleSetPropertyPut(request)
+                               else
+                                   handlePhotoPutInternal(request)
             "DELETE"        -> handlePhotoDeleteInternal(request)
             // AirPlay 2 handshake is HTTP-style (GET/POST with bodies) over the RTSP socket.
             "GET"           -> routeGet(request)
@@ -328,6 +349,8 @@ open class RtspHandler(
         "/pair-pin-start" -> handlePairPinStart(request)
         "/pair-verify" -> handlePairVerify(request)
         "/fp-setup"    -> handleFpSetup(request)
+        // FairPlay setup phase 2 (iOS 27 AirPlay video). Acknowledge it: a 4xx/5xx aborts playback.
+        "/fp-setup2"   -> RtspResponse(200, "OK", contentType = OCTET_STREAM, protocol = request.responseProtocol())
         "/feedback"    -> handleFeedback(request)
         "/audioMode"   -> RtspResponse(200, "OK", protocol = request.responseProtocol())
         // AirPlay video URL mode (non-mirroring): play a URL + drive transport.
@@ -345,11 +368,20 @@ open class RtspHandler(
         val (url, start) = parsePlayBody(request)
         val contentType = request.headers["Content-Type"] ?: "-"
         android.util.Log.i("iMirrorPlay", "POST /play ct=$contentType len=${request.bodyBytes.size} url=$url start=$start")
+        debugLog("PLAY ct=$contentType len=${request.bodyBytes.size} url=$url start=$start")
+        dev.imirror.receiver.util.Diagnostics.log(
+            "PLAY",
+            "ct=$contentType len=${request.bodyBytes.size} url=$url start=$start ua=${request.headers["User-Agent"]}"
+        )
         if (url.isNullOrBlank()) {
             android.util.Log.w(
                 "iMirrorPlay",
                 "unparsed /play body head=${request.body.take(300).replace('\n', ' ')} " +
                     "hex=${request.bodyBytes.take(16).joinToString("") { "%02x".format(it) }}"
+            )
+            debugLog(
+                "PLAY UNPARSED head=${request.body.take(400).replace('\n', ' ')} " +
+                    "hex=${request.bodyBytes.take(32).joinToString("") { "%02x".format(it) }}"
             )
             Logger.w("POST /play with no Content-Location")
             return RtspResponse(400, "Bad Request", headers = request.sessionHeaders(), protocol = request.responseProtocol())
@@ -363,6 +395,72 @@ open class RtspHandler(
     private fun RtspRequest.sessionHeaders(): Map<String, String> {
         val session = headers["Session"] ?: headers["session"] ?: return emptyMap()
         return mapOf("Session" to session)
+    }
+
+    /**
+     * PUT /setProperty?<name> — AirPlay property writes.
+     *
+     * iOS 27 sends the AirPlay video selection as `PUT /setProperty?selectedMediaArray` (binary
+     * plist) instead of the legacy POST /play. We were routing it to the photo handler, so the
+     * sender never got the plist `{errorCode:0}` it expects and never started playback.
+     * Here we parse any media URL from the plist and start playback, then acknowledge correctly.
+     */
+    private fun handleSetPropertyPut(request: RtspRequest): RtspResponse {
+        val property = request.uri.substringAfter("?", "").substringBefore("&")
+        dev.imirror.receiver.util.Diagnostics.log(
+            "SETPROP",
+            "prop=$property len=${request.bodyBytes.size} " +
+                "hex=${request.bodyBytes.take(160).joinToString("") { "%02x".format(it) }}"
+        )
+        if (property.startsWith("selectedMediaArray")) {
+            val urls = extractPlayableUrls(request.bodyBytes)
+            dev.imirror.receiver.util.Diagnostics.log("SETPROP", "urls=$urls")
+            urls.firstOrNull()?.let { onVideoPlay(it, 0.0) }
+        }
+        return RtspResponse(
+            200, "OK",
+            bodyBytes = PlistCodec.encode(mapOf("errorCode" to 0L)),
+            contentType = "application/x-apple-binary-plist",
+            protocol = request.responseProtocol()
+        )
+    }
+
+    /** Recursively finds absolute http(s) URLs inside a plist body (fallback: raw regex). */
+    private fun extractPlayableUrls(bodyBytes: ByteArray): List<String> {
+        val found = mutableListOf<String>()
+        fun walk(value: Any?) {
+            when (value) {
+                is String -> if (value.startsWith("http://") || value.startsWith("https://")) found.add(value)
+                is Map<*, *> -> value.values.forEach { walk(it) }
+                is List<*> -> value.forEach { walk(it) }
+                is ByteArray -> Regex("""https?://[^\s"'<>]+""")
+                    .findAll(String(value, Charsets.ISO_8859_1))
+                    .forEach { found.add(it.value) }
+            }
+        }
+        val head = String(bodyBytes, 0, minOf(64, bodyBytes.size), Charsets.US_ASCII).trimStart()
+        val looksPlist = head.startsWith("bplist00") || head.startsWith("<?xml") ||
+            head.startsWith("<plist") || head.startsWith("<!DOCTYPE")
+        if (looksPlist) runCatching { walk(PlistCodec.decode(bodyBytes)) }
+        Regex("""https?://[^\s"'<>]+""")
+            .findAll(String(bodyBytes, Charsets.ISO_8859_1))
+            .forEach { found.add(it.value) }
+        return found.distinct()
+    }
+
+    /**
+     * Diagnostic trace readable with `adb pull /sdcard/Android/data/dev.imirror.receiver/files/rtsp-debug.log`
+     * (kept in external files so it survives the tiny logcat buffer). Truncated automatically.
+     */
+    private fun debugLog(line: String) {
+        android.util.Log.i("iMirrorRtsp", line)
+        runCatching {
+            val dir = context.getExternalFilesDir(null) ?: return@runCatching
+            val file = java.io.File(dir, "rtsp-debug.log")
+            if (file.length() > 256 * 1024) file.delete()
+            val ts = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US).format(java.util.Date())
+            file.appendText("$ts $line\n")
+        }
     }
 
     /**
@@ -665,7 +763,28 @@ open class RtspHandler(
      *  - msg 2 carries `streams`[type 110] → start the mirror data server, reply with its port.
      */
     private fun handleMirrorSetup(request: RtspRequest): RtspResponse = try {
+        dev.imirror.receiver.util.Diagnostics.log(
+            "SETUP",
+            "body=${request.bodyBytes.size}B hex=${request.bodyBytes.take(64).joinToString("") { "%02x".format(it) }}"
+        )
         val req = PlistCodec.decode(request.bodyBytes)
+        val streamsDebug = (req["streams"] as? List<*>)?.joinToString(" | ") { s ->
+            val m = s as? Map<*, *>
+            "type=${(m?.get("type") as? Number)?.toInt()} keys=${m?.keys}"
+        } ?: "null"
+        dev.imirror.receiver.util.Diagnostics.log("SETUP", "keys=${req.keys} streams=$streamsDebug")
+        val sanitized = req.entries.joinToString(" | ") { (k, v) ->
+            when {
+                k == "ekey" || k == "eiv" -> "$k=<${(v as? ByteArray)?.size ?: "?"}B>"
+                v is ByteArray -> "$k=${v.size}B"
+                v is List<*> -> "$k=list[${v.size}]"
+                else -> "$k=$v"
+            }
+        }
+        dev.imirror.receiver.util.Diagnostics.log(
+            "SETUP",
+            "ua=${request.headers["User-Agent"]} values: $sanitized"
+        )
         Logger.i("mirror SETUP plist: " + req.entries.joinToString { (k, v) ->
             "$k=" + when (v) {
                 is ByteArray -> "${v.size}B"
@@ -681,7 +800,7 @@ open class RtspHandler(
             val aesKey = fairPlay!!.decrypt(ekey)
             val ecdhSecret = pairingSession?.sharedSecret ?: error("mirror SETUP before pair-verify")
             val aesIv = (req["eiv"] as? ByteArray) ?: ByteArray(16)
-            val senderTimingPort = (req["timingPort"] as? Long)?.toInt() ?: 0
+            val senderTimingPort = (req["timingPort"] as? Number)?.toInt() ?: 0
             val remoteAddr = currentRemoteAddress ?: error("mirror SETUP without remote address")
             val (eventPort, timingPort) = onMirrorSetupKeys(aesKey, ecdhSecret, aesIv, remoteAddr, senderTimingPort)
             response["eventPort"] = eventPort.toLong()
@@ -693,12 +812,13 @@ open class RtspHandler(
         if (streams != null) {
             val resStreams = streams.mapNotNull { s ->
                 val stream = s as? Map<*, *> ?: return@mapNotNull null
-                when ((stream["type"] as? Long)?.toInt()) {
+                when ((stream["type"] as? Number)?.toInt()) {
                     110 -> {
-                        val scid = (stream["streamConnectionID"] as? Long) ?: 0L
+                        val scid = (stream["streamConnectionID"] as? Number)?.toLong() ?: 0L
                         val dataPort = onMirrorStreamStart(scid)
                         activeStreamTypes.add(110)
                         Logger.i("mirror stream type=110 streamConnectionID=$scid dataPort=$dataPort")
+                        dev.imirror.receiver.util.Diagnostics.log("SETUP", "video stream scid=$scid dataPort=$dataPort")
                         mapOf("type" to 110L, "dataPort" to dataPort.toLong())
                     }
                     96 -> {
@@ -710,13 +830,14 @@ open class RtspHandler(
                             Logger.i("mirror stream type=96 ignored (audio disabled in settings)")
                             return@mapNotNull null
                         }
-                        val sr = (stream["sr"] as? Long)?.toInt() ?: 44100
-                        val ch = (stream["channels"] as? Long)?.toInt() ?: 2
-                        val ct = (stream["ct"] as? Long)?.toInt() ?: 8   // 8 = AAC-ELD (mirror), 4 = AAC-LC, 2 = ALAC
-                        val spf = (stream["spf"] as? Long)?.toInt() ?: 352   // ALAC frameLength (samples/frame)
+                        val sr = (stream["sr"] as? Number)?.toInt() ?: 44100
+                        val ch = (stream["channels"] as? Number)?.toInt() ?: 2
+                        val ct = (stream["ct"] as? Number)?.toInt() ?: 8   // 8 = AAC-ELD (mirror), 4 = AAC-LC, 2 = ALAC
+                        val spf = (stream["spf"] as? Number)?.toInt() ?: 352   // ALAC frameLength (samples/frame)
                         val (dataPort, controlPort) = onMirrorAudioStart(sr, ch, ct, spf)
                         activeStreamTypes.add(96)
                         Logger.i("audio stream type=96 (ct=$ct ${sr}Hz x$ch spf=$spf) dataPort=$dataPort controlPort=$controlPort")
+                        dev.imirror.receiver.util.Diagnostics.log("SETUP", "audio stream ct=$ct ${sr}Hz x$ch dataPort=$dataPort")
                         mapOf("type" to 96L, "dataPort" to dataPort.toLong(), "controlPort" to controlPort.toLong())
                     }
                     103 -> {
@@ -744,6 +865,8 @@ open class RtspHandler(
                 }
             }
             response["streams"] = resStreams
+            dev.imirror.receiver.util.Diagnostics.log("SETUP", "response streams=${resStreams.size} -> ${resStreams.map { it["type"] }}")
+            dev.imirror.receiver.util.Diagnostics.log("SETUP", "response keys=${response.keys} values=$response")
         }
 
         RtspResponse(
@@ -754,6 +877,10 @@ open class RtspHandler(
         )
     } catch (e: Exception) {
         Logger.e("mirror SETUP failed", e)
+        dev.imirror.receiver.util.Diagnostics.log(
+            "SETUP",
+            "FAILED ${e.javaClass.simpleName}: ${e.message} body=${request.bodyBytes.take(200).joinToString("") { "%02x".format(it) }}"
+        )
         RtspResponse(400, "Bad Request", protocol = request.responseProtocol())
     }
 
@@ -1001,7 +1128,7 @@ open class RtspHandler(
         )
     }
 
-    private fun sendResponse(outputStream: OutputStream, response: RtspResponse) {
+    private fun sendResponse(outputStream: OutputStream, response: RtspResponse, cseq: Int) {
         // Binary-safe: build the header block as ASCII, then write the raw body bytes.
         // Content-Length must be the BYTE length (not String.length) so binary plists,
         // FairPlay payloads, and encrypted bodies are framed correctly.
@@ -1009,7 +1136,7 @@ open class RtspHandler(
         val head = StringBuilder()
         head.append("${response.protocol} ${response.statusCode} ${response.statusMessage}\r\n")
         if (response.protocol.startsWith("RTSP")) {
-            head.append("CSeq: $currentCSeq\r\n")
+            head.append("CSeq: $cseq\r\n")
         }
         head.append("Server: AirTunes/220.68\r\n")
         response.contentType?.let { head.append("Content-Type: $it\r\n") }

@@ -13,18 +13,25 @@ internal class RtspRequestReader(
     private val maxMessageBytes: Int,
     private val maxPhotoBytes: Int
 ) {
+    /** Optional diagnostic sink (wired to RtspHandler's file log). */
+    var onDiagnostic: ((String) -> Unit)? = null
+
     /**
      * Reads one complete RTSP or AirPlay photo request from [inputStream].
      *
      * Returns null on clean EOF, malformed input, or payloads over the configured limits.
      */
     fun read(inputStream: InputStream): RtspRequest? {
-        val requestLine = readLine(inputStream) ?: return null
+        val requestLine = readRequestLine(inputStream) ?: return null
         if (requestLine.isBlank()) return read(inputStream)
 
         val parts = requestLine.split(" ")
         if (parts.size < 3) {
-            Logger.w("Malformed RTSP request line: '$requestLine'")
+            val printable = requestLine.take(120).map { if (it.code in 32..126) it else '.' }.joinToString("")
+            val hex = requestLine.toByteArray(Charsets.ISO_8859_1).take(48)
+                .joinToString("") { "%02x".format(it) }
+            onDiagnostic?.invoke("MALFORMED line='$printable' hex=$hex")
+            Logger.w("Malformed RTSP request line: '$printable'")
             return null
         }
 
@@ -104,6 +111,28 @@ internal class RtspRequestReader(
             if (b == '\n'.code) return sb.toString()
             sb.append(b.toChar())
             if (sb.length > maxMessageBytes) return null
+        }
+    }
+
+    /**
+     * Reads the request line, logging the very first byte so a bare TCP probe (no data) can be
+     * told apart from a TLS ClientHello / binary garbage that the RTSP parser rejects.
+     */
+    private fun readRequestLine(inputStream: InputStream): String? {
+        val first = inputStream.read()
+        if (first == -1) {
+            onDiagnostic?.invoke("EOF (no bytes)")
+            return null
+        }
+        onDiagnostic?.invoke("FIRST_BYTE=0x%02x".format(first))
+        val sb = StringBuilder()
+        var b = first
+        while (true) {
+            if (b == '\n'.code) return sb.toString()
+            if (b != '\r'.code) sb.append(b.toChar())
+            if (sb.length > maxMessageBytes) return null
+            b = inputStream.read()
+            if (b == -1) return sb.toString()
         }
     }
 }

@@ -117,5 +117,17 @@
     <string name="licenses_body">iMirror 是自由软件，采用 GPL-3.0 许可。\n\n基于 prat3ik 的开源项目 iMirror（GPL-3.0）、UxPlay AirPlay 服务器（LGPL-2.1+）、playfair FairPlay 实现（GPL）以及 FFmpeg。\n\n源代码：github.com/pietroMastro92/ciakmirror\n\nApple、AirPlay、iPhone、iPad、Mac 和 macOS 是 Apple Inc. 的商标。本应用与 Apple 无关联，也未获得其认可。受 DRM 保护的内容无法投射。</string>
     <string name="licenses_open_source">开源页面</string>
     <string name="video_playback_failed">无法播放此视频：格式不受支持或内容受 DRM 保护。</string>
+    <string name="history_title">最近连接</string>
+    <string name="history_empty">暂无最近连接</string>
+    <string name="history_view_all">查看全部</string>
+    <string name="history_clear">清除历史记录</string>
+    <string name="history_close">关闭</string>
+    <string name="history_item">%1$s — %2$s · %3$s · %4$s</string>
+    <string name="history_minutes">%1$d 分钟</string>
+    <string name="history_seconds">%1$d 秒</string>
+    <string name="history_kind_mirroring">镜像</string>
+    <string name="history_kind_video">AirPlay 视频</string>
+    <string name="history_kind_audio">仅音频</string>
+    <string name="history_outcome_error">错误</string>
 
 </resources>

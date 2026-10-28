@@ -56,3 +56,14 @@
 - **Test**: `/play` XML plist + chiusura immediata socket → `/playback-info` su nuova connessione
   riporta position 187s e il video è visibile; `/stop` su terza connessione ferma tutto.
 - APK store: `iMirror-v1.8.4-amazon-armeabi-v7a.apk` (versionCode 13).
+
+## 28 ottobre 2026 — v1.9.0 (versionCode 21) — release consolidata
+- **Mirroring iPhone/Mac**: SETUP a due fasi (chiavi + stream), parsing numerico tollerante
+  (`Number`), server RTSP **multi-connessione**. Verificato su Fire Stick: 1920x1080, 31-54 fps, 0 drop.
+- **Video AirPlay**: `/play` (HLS TS/fMP4 via Media3 ExoPlayer), plist XML/binari, `selectedMediaArray`
+  iOS 27, sopravvivenza del player alla chiusura del control socket.
+- **Cronologia locale** ultime 20 sessioni (Home + "Vedi tutte"/"Cancella"), 5 lingue.
+- **Diagnostica locale** su file (RTSP + pipeline mirror), mai trasmessa.
+- **Limiti noti**: i video iOS in fullscreen protetti da HDCP restano neri per scelta di Apple;
+  la nuova modalità video cifrata iOS 27 (`fp-setup2`/HAP) non è implementata.
+- APK store: `iMirror-v1.9.0-amazon-armeabi-v7a.apk` (versionCode 21).

@@ -85,8 +85,10 @@ class MirrorStreamServer(
     private fun runReader() {
         try {
             Logger.i("MirrorStreamServer listening on data port $dataPort")
+            dev.imirror.receiver.util.Diagnostics.log("MIRROR", "listening dataPort=$dataPort")
             val socket = serverSocket.accept().also { client = it }
             Logger.i("Mirror data connection from ${socket.inetAddress.hostAddress}")
+            dev.imirror.receiver.util.Diagnostics.log("MIRROR", "data client=${socket.inetAddress.hostAddress}")
             val input = socket.getInputStream()
             val header = ByteArray(128)
             while (running && !socket.isClosed) {
@@ -95,6 +97,7 @@ class MirrorStreamServer(
                 val payloadType = leShort(header, 4) and 0xFF
                 if (payloadSize <= 0 || payloadSize > MAX_PAYLOAD) {
                     Logger.w("Mirror: bad payloadSize=$payloadSize type=$payloadType — stopping")
+                    dev.imirror.receiver.util.Diagnostics.log("MIRROR", "bad payload size=$payloadSize type=$payloadType")
                     break
                 }
                 val payload = ByteArray(payloadSize)
@@ -112,9 +115,11 @@ class MirrorStreamServer(
             }
         } catch (e: Exception) {
             if (running) Logger.e("Mirror reader error", e)
+            dev.imirror.receiver.util.Diagnostics.log("MIRROR", "reader error: ${e.message}")
         } finally {
             running = false
             Logger.i("Mirror data connection ended")
+            dev.imirror.receiver.util.Diagnostics.log("MIRROR", "data connection ended (framesIn=$framesIn dropped=$framesDropped)")
         }
     }
 
@@ -136,6 +141,10 @@ class MirrorStreamServer(
             StreamStats.videoDropPct = framesDropped * 100 / framesIn
             Logger.i("Video stats: in=$framesIn dropped=$framesDropped " +
                 "(${StreamStats.videoDropPct}%) queue=${queue.size}/$QUEUE_CAPACITY ${StreamStats.videoFps}fps")
+            dev.imirror.receiver.util.Diagnostics.log(
+                "MIRROR",
+                "stats in=$framesIn dropped=$framesDropped queue=${queue.size} fps=${StreamStats.videoFps}"
+            )
         }
     }
 
@@ -198,6 +207,10 @@ class MirrorStreamServer(
         awaitingSince = System.currentTimeMillis()
         StreamStats.videoRes = "${width}x${height}"
         Logger.i("Mirror decoder (re)built for surface (sps=${sps.size}B pps=${pps.size}B)")
+        dev.imirror.receiver.util.Diagnostics.log(
+            "MIRROR",
+            "decoder built ${width}x${height} sps=${sps.size}B pps=${pps.size}B"
+        )
     }
 
     private fun decodeFrame(annexB: ByteArray) {
@@ -206,6 +219,10 @@ class MirrorStreamServer(
         val liveSurface = surfaceProvider()
         if (liveSurface !== configuredSurface) {
             Logger.i("Mirror: surface ${if (liveSurface == null) "lost" else "changed"} — re-attaching decoder")
+            dev.imirror.receiver.util.Diagnostics.log(
+                "MIRROR",
+                "surface ${if (liveSurface == null) "lost" else "changed"} — rebuilding decoder"
+            )
             rebuildDecoder(liveSurface)
         }
         val d = decoder ?: return                              // need surface + SPS/PPS first
@@ -231,7 +248,10 @@ class MirrorStreamServer(
                 Logger.i("Mirror: resynced on keyframe after a dropped frame")
             }
         }
-        if (framePtsUs == 0L) Logger.i("Mirror: first video frame fed to decoder (${annexB.size}B)")
+        if (framePtsUs == 0L) {
+            Logger.i("Mirror: first video frame fed to decoder (${annexB.size}B)")
+            dev.imirror.receiver.util.Diagnostics.log("MIRROR", "FIRST frame fed to decoder (${annexB.size}B)")
+        }
         d.decodeNalUnit(annexB, framePtsUs)
         framePtsUs += FRAME_INTERVAL_US
     }

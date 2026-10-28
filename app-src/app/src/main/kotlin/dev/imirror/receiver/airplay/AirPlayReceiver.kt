@@ -92,6 +92,8 @@ class AirPlayReceiver(
     private val onNowPlayingChanged: (NowPlayingInfo?) -> Unit = {},
     /** Called when URL-video playback fails (unsupported format, DRM, network): the UI shows an error. */
     private val onVideoError: () -> Unit = {},
+    /** True when AirPlay URL video mode starts, false when it stops (session history kind). */
+    private val onVideoModeChanged: (Boolean) -> Unit = {},
     /** Pairing PIN to show ([pin]) or hide (null) on the TV during SRP pair-setup. */
     private val onPinChanged: (pin: String?) -> Unit = {}
 ) {
@@ -453,12 +455,22 @@ class AirPlayReceiver(
      * @return the data server's TCP port (macOS connects here to send H.264).
      */
     private fun startMirrorStream(streamConnectionId: Long): Int {
-        val aesKey = mirrorAesKey ?: run { Logger.e("mirror stream start before keys set"); return 0 }
-        val ecdhSecret = mirrorEcdhSecret ?: return 0
+        val aesKey = mirrorAesKey ?: run {
+            Logger.e("mirror stream start before keys set")
+            dev.imirror.receiver.util.Diagnostics.log("MIRROR", "startMirrorStream WITHOUT keys")
+            return 0
+        }
+        val ecdhSecret = mirrorEcdhSecret ?: run {
+            dev.imirror.receiver.util.Diagnostics.log("MIRROR", "startMirrorStream WITHOUT ecdhSecret")
+            return 0
+        }
         return MirrorStreamServer(aesKey, ecdhSecret, streamConnectionId, videoSurfaceProvider, mirrorWidth, mirrorHeight)
             .also { mirrorServer = it; it.start(scope); videoPlaying = true; emitNowPlaying() }
             .dataPort
-            .also { Logger.i("Mirror data server started on port $it") }
+            .also {
+                Logger.i("Mirror data server started on port $it")
+                dev.imirror.receiver.util.Diagnostics.log("MIRROR", "data server started port=$it scid=$streamConnectionId")
+            }
     }
 
     /** Mirror SETUP audio stream (type 96): start the AAC-ELD / AAC-LC / ALAC audio server. @return (dataPort, controlPort). */
@@ -498,6 +510,7 @@ class AirPlayReceiver(
      * [AirPlayVideoPlayer], which fetches + plays it via MediaPlayer onto the same Surface.
      */
     private fun startUrlVideo(url: String, startFraction: Double) {
+        onVideoModeChanged(true)
         onSenderNameChanged("AirPlay")
         emitState(ProtocolState.CONNECTED)   // shows StreamingScreen → Surface becomes available
         val player = urlVideoPlayer ?: AirPlayVideoPlayer(
@@ -515,6 +528,7 @@ class AirPlayReceiver(
         urlVideoPlayer?.release()
         urlVideoPlayer = null
         onStreamingStopped()
+        onVideoModeChanged(false)
         Logger.i("AirPlay URL video stopped")
     }
 
