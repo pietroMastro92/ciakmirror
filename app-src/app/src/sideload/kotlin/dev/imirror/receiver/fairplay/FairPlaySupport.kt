@@ -27,7 +27,7 @@ import java.net.NetworkInterface.getNetworkInterfaces
 object FairPlaySupport {
 
     private const val ASSET = "fairplaysap-arm"
-    private const val HELPER_VERSION = "4"   // bump when the helper binary changes
+    private const val HELPER_VERSION = "5"   // bump when the helper binary changes
     private const val HELPER_PORT = 7001
     private const val HELPER_NAME = "iMirror Video"
 
