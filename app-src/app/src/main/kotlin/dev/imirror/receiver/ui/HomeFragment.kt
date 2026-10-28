@@ -201,7 +201,7 @@ class HomeFragment : Fragment() {
                 setPadding(0, 6, 0, 6)
             })
         }
-        btnHistoryAll.visibility = if (records.size > 3) View.VISIBLE else View.GONE
+        btnHistoryAll.visibility = if (records.isNotEmpty()) View.VISIBLE else View.GONE
         btnHistoryAll.setOnClickListener { showHistoryDialog(records) }
     }
 

@@ -67,3 +67,7 @@
 - **Limiti noti**: i video iOS in fullscreen protetti da HDCP restano neri per scelta di Apple;
   la nuova modalità video cifrata iOS 27 (`fp-setup2`/HAP) non è implementata.
 - APK store: `iMirror-v1.9.0-amazon-armeabi-v7a.apk` (versionCode 21).
+
+## 28 ottobre 2026 — v1.9.1 (versionCode 22)
+- Fix UI: "Vedi tutte" (e quindi "Cancella cronologia") sempre visibile quando esiste almeno una sessione.
+- Nessun'altra modifica funzionale rispetto a v1.9.0.
